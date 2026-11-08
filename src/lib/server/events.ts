@@ -2,7 +2,8 @@ import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { draw, type Rng } from '#lib/draw.ts';
 import { normalizeEmail, type InviteParticipant } from '#lib/invites.ts';
 import type { Db } from './db/index.ts';
-import { assignment, event, exclusion, participant, wish } from './db/schema.ts';
+import { assignment, event, exclusion, participant, photo, wish } from './db/schema.ts';
+import type { PhotoInput } from './photos.ts';
 import { createToken } from './token.ts';
 
 /** Errore di dominio con messaggio mostrabile all'utente. */
@@ -94,9 +95,11 @@ export async function getAdminView(db: Db, adminToken: string) {
 			managedById: participant.managedById,
 			isOrganizer: participant.isOrganizer,
 			inviteSentAt: participant.inviteSentAt,
-			inviteOpenedAt: participant.inviteOpenedAt
+			inviteOpenedAt: participant.inviteOpenedAt,
+			photoId: photo.id
 		})
 		.from(participant)
+		.leftJoin(photo, eq(photo.participantId, participant.id))
 		.where(eq(participant.eventId, ev.id))
 		.orderBy(asc(participant.createdAt));
 
@@ -123,6 +126,7 @@ export interface AddParticipantInput {
 	name: string;
 	email?: string | null;
 	managedById?: string | null;
+	photo?: PhotoInput | null;
 }
 
 export async function addParticipant(db: Db, adminToken: string, input: AddParticipantInput) {
@@ -150,7 +154,51 @@ export async function addParticipant(db: Db, adminToken: string, input: AddParti
 		.insert(participant)
 		.values({ eventId: ev.id, name, email, managedById, token: createToken() })
 		.returning({ id: participant.id });
+	if (input.photo) await savePhoto(db, created.id, input.photo);
 	return created;
+}
+
+// ------------------------------------------------------------------ foto
+
+async function savePhoto(db: Db, participantId: string, input: PhotoInput) {
+	// Sostituzione = nuova riga con nuovo id, così l'URL vecchio (in cache) non mostra la foto nuova.
+	await db.delete(photo).where(eq(photo.participantId, participantId));
+	await db.insert(photo).values({ participantId, mime: input.mime, data: input.data });
+}
+
+async function requireParticipantOfEvent(db: Db, adminToken: string, participantId: string) {
+	const [row] = await db
+		.select({ id: participant.id })
+		.from(participant)
+		.innerJoin(event, eq(event.id, participant.eventId))
+		.where(and(eq(event.adminToken, adminToken), eq(participant.id, participantId)));
+	if (!row) throw new EventError('Partecipante non trovato.', 404);
+	return row;
+}
+
+/** Le foto si possono cambiare anche dopo l'estrazione: non influiscono sugli abbinamenti. */
+export async function setPhoto(
+	db: Db,
+	adminToken: string,
+	participantId: string,
+	input: PhotoInput
+) {
+	await requireParticipantOfEvent(db, adminToken, participantId);
+	await savePhoto(db, participantId, input);
+}
+
+export async function removePhoto(db: Db, adminToken: string, participantId: string) {
+	await requireParticipantOfEvent(db, adminToken, participantId);
+	await db.delete(photo).where(eq(photo.participantId, participantId));
+}
+
+export async function getPhoto(db: Db, photoId: string) {
+	if (!/^[0-9a-f-]{36}$/i.test(photoId)) return null;
+	const [row] = await db
+		.select({ mime: photo.mime, data: photo.data })
+		.from(photo)
+		.where(eq(photo.id, photoId));
+	return row ?? null;
 }
 
 export async function removeParticipant(db: Db, adminToken: string, participantId: string) {
@@ -271,9 +319,10 @@ export async function getInviteView(db: Db, token: string) {
 		: null;
 
 	const [assigned] = await db
-		.select({ id: participant.id, name: participant.name })
+		.select({ id: participant.id, name: participant.name, photoId: photo.id })
 		.from(assignment)
 		.innerJoin(participant, eq(participant.id, assignment.receiverId))
+		.leftJoin(photo, eq(photo.participantId, participant.id))
 		.where(eq(assignment.giverId, me.id));
 
 	const wishes = await db
@@ -302,6 +351,7 @@ export async function getInviteView(db: Db, token: string) {
 		receiver: assigned
 			? {
 					name: assigned.name,
+					photoId: assigned.photoId,
 					wishes: wishes.filter((w) => w.participantId === assigned.id).map((w) => w.text)
 				}
 			: null,

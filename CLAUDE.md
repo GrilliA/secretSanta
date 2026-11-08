@@ -57,9 +57,13 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
 - Le pagine usano form actions + `use:enhance`. `getDb()` è async.
 - Lo schema si cambia solo con `db:generate` (migrazioni versionate in `drizzle/`), mai `db:push` in produzione.
 - `/anteprima/email` esiste solo in sviluppo.
+- **Foto**: le carica l'organizzatore (form di aggiunta o clic sull'avatar). Il browser le ritaglia/riduce
+  (`#lib/photo-client.ts`), il server valida i byte reali (`#lib/server/photos.ts`) e le salva in base64
+  nella tabella `photo`. Servite da `/foto/[photoId]` con cache immutable: l'id cambia a ogni sostituzione.
 
 ## Pagine
 
 - `/` crea l'evento (manda all'organizzatore il link di gestione)
 - `/evento/[adminToken]` partecipanti, esclusioni, estrazione + invio, stato inviti, "Rimanda"
-- `/r/[token]` busta animata, destinatario, desideri
+- `/r/[token]` busta animata, viso + nome del destinatario, desideri
+- `/foto/[id]` immagine di un partecipante

@@ -101,3 +101,19 @@ export const wish = pgTable(
 	},
 	(t) => [index('wish_participant_idx').on(t.participantId)]
 );
+
+/**
+ * Foto del partecipante (caricata dall'organizzatore), già ritagliata e ridotta nel browser.
+ * Salvata in base64 per essere indipendente dal driver; servita da `/foto/[id]`.
+ * L'id cambia a ogni sostituzione, così la risposta può essere messa in cache per sempre.
+ */
+export const photo = pgTable('photo', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	participantId: uuid('participant_id')
+		.notNull()
+		.unique()
+		.references(() => participant.id, { onDelete: 'cascade' }),
+	mime: text('mime').notNull(),
+	data: text('data').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});

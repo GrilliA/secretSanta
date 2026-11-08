@@ -2,7 +2,9 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import Avatar from '#lib/components/Avatar.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
+	import { preparePhoto, replaceInputFile } from '#lib/photo-client.ts';
 	import { formatDay } from '#lib/format.ts';
 	import type { PageProps } from './$types';
 
@@ -15,10 +17,33 @@
 	const opened = $derived(data.participants.filter((p) => p.inviteOpenedAt).length);
 
 	const countLabel = $derived(
-		`${data.participants.length} persone` + (drawn ? ` · ${opened} hanno aperto l’invito` : '')
+		(data.participants.length === 1 ? '1 persona' : `${data.participants.length} persone`) +
+			(drawn ? ` · ${opened} hanno aperto l’invito` : '')
 	);
 
 	let managedBy = $state('');
+	let newPhotoPreview = $state<string | null>(null);
+	let photoError = $state<string | null>(null);
+
+	/** Ritaglia e riduce la foto nel browser, poi la rimette nell'input del form. */
+	async function onPhotoChange(e: Event, autoSubmit = false) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		photoError = null;
+		if (!file) return;
+		try {
+			const prepared = await preparePhoto(file);
+			replaceInputFile(input, prepared);
+			if (autoSubmit) input.form?.requestSubmit();
+			else {
+				if (newPhotoPreview) URL.revokeObjectURL(newPhotoPreview);
+				newPhotoPreview = URL.createObjectURL(prepared);
+			}
+		} catch {
+			photoError = 'Non riesco a leggere questa immagine: prova con un’altra foto.';
+			input.value = '';
+		}
+	}
 	let busy = $state(false);
 	let copied = $state(false);
 
@@ -45,7 +70,11 @@
 			result: { type: string };
 		}) => {
 			await update({ reset: result.type === 'success' });
-			if (result.type === 'success') managedBy = '';
+			if (result.type === 'success') {
+				managedBy = '';
+				if (newPhotoPreview) URL.revokeObjectURL(newPhotoPreview);
+				newPhotoPreview = null;
+			}
 			busy = false;
 		};
 	};
@@ -130,9 +159,44 @@
 
 			{#each data.participants as p (p.id)}
 				<div class="person" class:managed={p.managedById}>
-					<div class="avatar" class:org={p.isOrganizer} class:red={p.managedById}>
-						{p.name[0]}
-					</div>
+					<form
+						class="photo-pick"
+						method="POST"
+						action="?/photo"
+						enctype="multipart/form-data"
+						use:enhance={submit}
+					>
+						<input type="hidden" name="id" value={p.id} />
+						<label title={p.photoId ? 'Cambia foto' : 'Aggiungi foto'}>
+							<Avatar
+								name={p.name}
+								photoId={p.photoId}
+								tone={p.isOrganizer ? 'pine' : p.managedById ? 'holly' : 'cream'}
+							/>
+							<span class="cam" aria-hidden="true">
+								<svg
+									width="12"
+									height="12"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.4"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg
+								>
+							</span>
+							<input
+								class="sr-only"
+								type="file"
+								name="photo"
+								accept="image/*"
+								aria-label="{p.photoId ? 'Cambia' : 'Aggiungi'} la foto di {p.name}"
+								disabled={busy}
+								onchange={(e) => onPhotoChange(e, true)}
+							/>
+						</label>
+					</form>
 					<div class="info">
 						<span class="pname">
 							{p.name}
@@ -175,8 +239,26 @@
 				<p class="muted">Ancora nessuno. Aggiungi la prima persona qui sotto.</p>
 			{/each}
 
+			{#if photoError}<p class="err" role="alert">{photoError}</p>{/if}
 			{#if !drawn}
-				<form class="add" method="POST" action="?/add" use:enhance={submit}>
+				<form
+					class="add"
+					method="POST"
+					action="?/add"
+					enctype="multipart/form-data"
+					use:enhance={submit}
+				>
+					<label class="photo-field">
+						<Avatar name="+" src={newPhotoPreview} size={56} />
+						<span>{newPhotoPreview ? 'Cambia foto' : 'Foto'}<small>facoltativa</small></span>
+						<input
+							class="sr-only"
+							type="file"
+							name="photo"
+							accept="image/*"
+							onchange={(e) => onPhotoChange(e)}
+						/>
+					</label>
 					<div class="field">
 						<label for="pnome">Nome</label>
 						<input id="pnome" name="name" class="input" placeholder="es. Sara" required />
@@ -455,25 +537,53 @@
 		border-color: #efc9c4;
 		background: var(--blush);
 	}
-	.avatar {
-		width: 40px;
-		height: 40px;
-		flex: none;
+	.photo-pick label {
+		position: relative;
+		display: block;
 		border-radius: 50%;
-		background: var(--cream-200);
+		cursor: pointer;
+	}
+	.photo-pick label:focus-within {
+		outline: 3px solid var(--gold);
+		outline-offset: 2px;
+	}
+	.cam {
+		position: absolute;
+		right: -4px;
+		bottom: -4px;
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: #fff;
+		border: 1px solid var(--cream-300);
 		color: var(--pine);
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+	.photo-field {
+		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-height: 56px;
+		padding-right: 8px;
+		cursor: pointer;
+		font-size: 14px;
 		font-weight: 600;
 	}
-	.avatar.org {
-		background: var(--pine);
-		color: var(--gold-300);
+	.photo-field span:last-of-type {
+		display: flex;
+		flex-direction: column;
 	}
-	.avatar.red {
-		background: var(--holly);
-		color: #fff;
+	.photo-field small {
+		font-weight: 400;
+		color: var(--ink-muted);
+	}
+	.photo-field:focus-within {
+		outline: 3px solid var(--gold);
+		outline-offset: 4px;
+		border-radius: var(--radius-sm);
 	}
 	.info {
 		flex: 1;

@@ -10,10 +10,14 @@ import {
 	EventError,
 	getAdminView,
 	getInviteView,
+	getPhoto,
+	removePhoto,
+	setPhoto,
 	removeParticipant,
 	removeWish,
 	runDraw
 } from './events.ts';
+import { readPhoto } from './photos.ts';
 import { createTestDb, resetTestDb } from './test-db.ts';
 
 let db: Db;
@@ -192,5 +196,70 @@ describe('vista partecipante e desideri', () => {
 
 	it('token sconosciuto → null', async () => {
 		expect(await getInviteView(db, 'nope')).toBeNull();
+	});
+});
+
+// JPEG minimo: basta la firma iniziale per la validazione.
+const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+const jpegFile = () => new File([JPEG], 'nonna.jpg', { type: 'image/jpeg' });
+
+describe('foto', () => {
+	it('valida i byte reali del file', async () => {
+		expect(await readPhoto(null)).toBeNull();
+		expect(await readPhoto(new File([], 'vuoto.jpg'))).toBeNull();
+		expect(await readPhoto(jpegFile())).toMatchObject({ mime: 'image/jpeg' });
+		await expect(
+			readPhoto(new File(['<svg onload=alert(1)>'], 'x.jpg', { type: 'image/jpeg' }))
+		).rejects.toThrow(EventError);
+		await expect(readPhoto(new File([new Uint8Array(2_000_000)], 'big.jpg'))).rejects.toThrow(
+			/troppo grande/
+		);
+	});
+
+	it('si aggiunge con il partecipante e chi lo pesca vede il suo viso', async () => {
+		await setupFamily();
+		const photoInput = await readPhoto(jpegFile());
+		await addParticipant(db, admin, { name: 'Sara', email: 's@s.it', photo: photoInput });
+
+		const view = await getAdminView(db, admin);
+		const sara = view!.participants.find((p) => p.name === 'Sara')!;
+		expect(sara.photoId).toBeTruthy();
+		expect(view!.participants.find((p) => p.name === 'Giulia')!.photoId).toBeNull();
+
+		const { participants } = await runDraw(db, admin);
+		for (const p of participants) {
+			const inv = await getInviteView(db, p.token);
+			if (inv?.receiver?.name === 'Sara') expect(inv.receiver.photoId).toBe(sara.photoId);
+		}
+		const stored = await getPhoto(db, sara.photoId!);
+		expect(Buffer.from(stored!.data, 'base64')).toEqual(Buffer.from(JPEG));
+	});
+
+	it('sostituire la foto cambia id; si può rimuovere; solo per partecipanti dell’evento', async () => {
+		const { nonna } = await setupFamily();
+		const input = (await readPhoto(jpegFile()))!;
+		await setPhoto(db, admin, nonna.id, input);
+		const first = (await getAdminView(db, admin))!.participants.find((p) => p.id === nonna.id)!;
+		await setPhoto(db, admin, nonna.id, input);
+		const second = (await getAdminView(db, admin))!.participants.find((p) => p.id === nonna.id)!;
+		expect(second.photoId).not.toBe(first.photoId);
+		expect(await getPhoto(db, first.photoId!)).toBeNull();
+
+		await removePhoto(db, admin, nonna.id);
+		expect(
+			(await getAdminView(db, admin))!.participants.find((p) => p.id === nonna.id)!.photoId
+		).toBeNull();
+
+		const other = await createEvent(db, {
+			name: 'Altro',
+			organizerName: 'Z',
+			organizerEmail: 'z@z.it',
+			organizerPlays: true
+		});
+		await expect(setPhoto(db, other.adminToken, nonna.id, input)).rejects.toThrow(EventError);
+	});
+
+	it('id non validi non fanno query', async () => {
+		expect(await getPhoto(db, 'nope')).toBeNull();
 	});
 });

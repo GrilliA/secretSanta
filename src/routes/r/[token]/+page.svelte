@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Avatar from '#lib/components/Avatar.svelte';
 	import Baubles from '#lib/components/Baubles.svelte';
 	import Envelope from '#lib/components/Envelope.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
@@ -49,13 +50,25 @@
 			{:else}
 				<div class="reveal" aria-live="polite">
 					<span class="lead fadein">Ciao {data.me.name}, quest’anno fai il regalo a…</span>
-					<h1 class="fadein late">{data.receiver.name}</h1>
-					<div class="facts fadein late">
-						{#if data.event.budget}<span>Budget {data.event.budget}</span>{/if}
-						{#if day}<span>Scambio il {day}</span>{/if}
-						<button type="button" class="replay" onclick={() => (phase = 'closed')}>
-							Riapri la busta
-						</button>
+					<div class="who">
+						<div class="face pop">
+							<Avatar
+								name={data.receiver.name}
+								photoId={data.receiver.photoId}
+								size={176}
+								tone="pine"
+							/>
+						</div>
+						<div class="who-text">
+							<h1 class="fadein late">{data.receiver.name}</h1>
+							<div class="facts fadein late">
+								{#if data.event.budget}<span>Budget {data.event.budget}</span>{/if}
+								{#if day}<span>Scambio il {day}</span>{/if}
+								<button type="button" class="replay" onclick={() => (phase = 'closed')}>
+									Riapri la busta
+								</button>
+							</div>
+						</div>
 					</div>
 					<svg class="spark s1" viewBox="0 0 24 24" aria-hidden="true"
 						><path d="M12 0l2.5 9.5L24 12l-9.5 2.5L12 24l-2.5-9.5L0 12l9.5-2.5z" /></svg
@@ -213,6 +226,52 @@
 	.btn:disabled {
 		opacity: 0.6;
 		cursor: default;
+	}
+	.who {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 20px 36px;
+		margin-top: 8px;
+	}
+	.face {
+		flex: none;
+		padding: 6px;
+		border-radius: 50%;
+		background: conic-gradient(
+			var(--gold),
+			var(--gold-300),
+			var(--gold),
+			var(--gold-700),
+			var(--gold)
+		);
+		box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+	}
+	.face :global(.avatar) {
+		border: 4px solid var(--holly-700);
+		font-family: var(--font-display);
+	}
+	.who-text {
+		flex: 1 1 280px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.pop {
+		animation: pop 0.9s 0.1s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+	}
+	@keyframes pop {
+		from {
+			opacity: 0;
+			transform: scale(0.4) rotate(-12deg);
+		}
+	}
+	@media (max-width: 560px) {
+		.face :global(.avatar) {
+			width: 128px !important;
+			height: 128px !important;
+		}
 	}
 	.reveal {
 		position: relative;
