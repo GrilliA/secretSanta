@@ -23,6 +23,8 @@ export const event = pgTable('event', {
 	/** Token segreto con cui l'organizzatore gestisce l'evento (link /evento/[adminToken]). */
 	adminToken: text('admin_token').notNull().unique(),
 	drawnAt: timestamp('drawn_at', { withTimezone: true }),
+	/** Quando abbiamo avvisato l'organizzatore che tutte le liste sono pronte (una volta sola). */
+	readyNotifiedAt: timestamp('ready_notified_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
@@ -43,6 +45,11 @@ export const participant = pgTable(
 		/** Token del link personale: mostra solo l'abbinamento di questa persona. */
 		token: text('token').notNull().unique(),
 		isOrganizer: boolean('is_organizer').notNull().default(false),
+		/** Fase 1: invito a scrivere la lista dei desideri. */
+		wishlistInvitedAt: timestamp('wishlist_invited_at', { withTimezone: true }),
+		/** Il partecipante ha detto "la mia lista è pronta". */
+		wishlistReadyAt: timestamp('wishlist_ready_at', { withTimezone: true }),
+		/** Fase 2: invito con la busta (dopo l'estrazione). */
 		inviteSentAt: timestamp('invite_sent_at', { withTimezone: true }),
 		inviteOpenedAt: timestamp('invite_opened_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()

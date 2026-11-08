@@ -30,11 +30,20 @@
 			{#if !data.receiver}
 				<div class="closed">
 					<span class="lead">Ciao {data.me.name}!</span>
-					<h1 class="wait">L’estrazione non è ancora stata fatta.</h1>
-					<p class="wait-text">
-						Riceverai una mail quando {data.event.organizerName} avrà estratto i nomi. Intanto puoi scrivere
-						la tua lista dei desideri qui sotto.
-					</p>
+					{#if data.me.ready}
+						<h1 class="wait">La tua lista è pronta. Ora si aspetta la busta!</h1>
+						<p class="wait-text">
+							Quando tutti avranno finito, {data.event.organizerName} farà l’estrazione e ti arriverà
+							una mail per scoprire a chi fare il regalo. Puoi ancora modificare la lista qui sotto.
+						</p>
+					{:else}
+						<h1 class="wait">Che cosa vorresti trovare sotto l’albero?</h1>
+						<p class="wait-text">
+							Scrivi qui sotto la tua lista dei desideri: la vedrà solo chi ti farà il regalo.
+							Quando hai finito, premi “La mia lista è pronta”.
+						</p>
+					{/if}
+					{#if data.event.message}<p class="wait-text quote">“{data.event.message}”</p>{/if}
 				</div>
 			{:else if phase !== 'revealed'}
 				<div class="closed">
@@ -157,7 +166,35 @@
 					<button class="btn btn-pine" type="submit">Aggiungi</button>
 				</form>
 				{#if form?.error}<p class="err" role="alert">{form.error}</p>{/if}
-				{#if data.receiver}
+				{#if !data.receiver}
+					<form class="ready" method="POST" action="?/ready" use:enhance>
+						<input type="hidden" name="ready" value={data.me.ready ? '0' : '1'} />
+						{#if data.me.ready}
+							<p class="ready-ok">
+								<svg
+									width="20"
+									height="20"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.4"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"><path d="M5 12l5 5L19 7" /></svg
+								>
+								Lista pronta
+							</p>
+							<button class="text-btn" type="submit">Devo ancora aggiungere qualcosa</button>
+						{:else}
+							<button class="btn btn-primary" type="submit" disabled={data.me.wishes.length === 0}>
+								La mia lista è pronta
+							</button>
+							{#if data.me.wishes.length === 0}
+								<small class="muted">Aggiungi almeno un desiderio.</small>
+							{/if}
+						{/if}
+					</form>
+				{:else}
 					<p class="secret">Shh… è un segreto: non dirlo a {data.receiver.name}!</p>
 				{/if}
 			</section>
@@ -433,6 +470,45 @@
 		font-size: 17px;
 		line-height: 1.55;
 		color: #f6dcd8;
+	}
+	.quote {
+		font-style: italic;
+		color: var(--gold-300);
+	}
+	.ready {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 16px;
+		margin-top: 8px;
+		padding-top: 16px;
+		border-top: 1px dashed var(--sand);
+	}
+	.ready .btn {
+		width: 100%;
+	}
+	.ready .btn:disabled {
+		opacity: 0.55;
+		cursor: default;
+	}
+	.ready-ok {
+		margin: 0;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-weight: 600;
+		color: var(--pine);
+	}
+	.text-btn {
+		min-height: 44px;
+		padding: 0 4px;
+		border: 0;
+		background: transparent;
+		color: var(--ink-muted);
+		font: inherit;
+		font-size: 14px;
+		text-decoration: underline;
+		cursor: pointer;
 	}
 	.wish-form {
 		display: flex;

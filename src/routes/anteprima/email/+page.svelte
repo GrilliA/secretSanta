@@ -2,7 +2,7 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
-	let selected = $state(1);
+	let selected = $state(0);
 	const current = $derived(data.emails[selected]);
 </script>
 

@@ -84,14 +84,31 @@ export const actions: Actions = {
 		});
 	},
 
+	/** Fase 1: invita a scrivere la lista chi non ha ancora ricevuto l'invito. */
+	inviteWishlist: async ({ params, url }) => {
+		const db = await getDb();
+		return guard(async () => {
+			const { event, kind, participants, sendTo } = await getInviteParticipants(db, params.admin, {
+				onlyNotInvited: true
+			});
+			if (kind !== 'wishlist') return fail(400, { error: 'L’estrazione è già stata fatta.' });
+			if (sendTo.length === 0) return fail(400, { error: 'Hanno già ricevuto tutti l’invito.' });
+			const result = await sendInvites(db, appOrigin(url), event, participants, sendTo, kind);
+			return { invited: true, ...result };
+		});
+	},
+
+	/** Rimanda l'invito della fase in corso (lista prima dell'estrazione, busta dopo). */
 	resend: async ({ params, request, url }) => {
 		const data = await request.formData();
 		const id = field(data, 'id');
 		if (!id) return fail(400, { error: 'Partecipante mancante.' });
 		const db = await getDb();
 		return guard(async () => {
-			const { event, participants } = await getInviteParticipants(db, params.admin);
-			const result = await sendInvites(db, appOrigin(url), event, participants, [id]);
+			const { event, kind, participants, sendTo } = await getInviteParticipants(db, params.admin, {
+				onlyIds: [id]
+			});
+			const result = await sendInvites(db, appOrigin(url), event, participants, sendTo, kind);
 			return { resent: true, ...result };
 		});
 	}

@@ -15,7 +15,10 @@ import {
 	setPhoto,
 	removeParticipant,
 	removeWish,
-	runDraw
+	runDraw,
+	setWishlistReady,
+	getInviteParticipants,
+	markWishlistInvited
 } from './events.ts';
 import { readPhoto } from './photos.ts';
 import { createTestDb, resetTestDb } from './test-db.ts';
@@ -261,5 +264,65 @@ describe('foto', () => {
 
 	it('id non validi non fanno query', async () => {
 		expect(await getPhoto(db, 'nope')).toBeNull();
+	});
+});
+
+describe('fase lista dei desideri', () => {
+	async function tokens() {
+		return (await db.query.participant.findMany()).map((p) => p.token);
+	}
+
+	it('prima dell’estrazione gli inviti sono della fase lista, solo per chi non li ha ricevuti', async () => {
+		await setupFamily();
+		const first = await getInviteParticipants(db, admin, { onlyNotInvited: true });
+		expect(first.kind).toBe('wishlist');
+		expect(first.sendTo).toHaveLength(4);
+
+		await markWishlistInvited(db, first.sendTo.slice(0, 2));
+		const again = await getInviteParticipants(db, admin, { onlyNotInvited: true });
+		expect(again.sendTo).toHaveLength(2);
+
+		await runDraw(db, admin);
+		expect((await getInviteParticipants(db, admin)).kind).toBe('draw');
+	});
+
+	it('avvisa l’organizzatore una sola volta, quando l’ultima lista è pronta', async () => {
+		await setupFamily();
+		const all = await tokens();
+		for (const t of all.slice(0, -1)) {
+			expect((await setWishlistReady(db, t, true)).notifyOrganizer).toBeNull();
+		}
+		const last = await setWishlistReady(db, all.at(-1)!, true);
+		expect(last.notifyOrganizer?.adminToken).toBe(admin);
+		expect(last.count).toBe(4);
+
+		// Riaprire e richiudere una lista non manda un secondo avviso.
+		await setWishlistReady(db, all[0], false);
+		expect((await setWishlistReady(db, all[0], true)).notifyOrganizer).toBeNull();
+	});
+
+	it('una persona aggiunta dopo l’avviso fa ripartire l’attesa', async () => {
+		await setupFamily();
+		for (const t of await tokens()) await setWishlistReady(db, t, true);
+
+		await addParticipant(db, admin, { name: 'Sara', email: 's@s.it' });
+		const sara = (await db.query.participant.findMany()).find((p) => p.name === 'Sara')!;
+		expect((await setWishlistReady(db, sara.token, true)).notifyOrganizer).not.toBeNull();
+	});
+
+	it('dopo l’estrazione non avvisa più', async () => {
+		await setupFamily();
+		const all = await tokens();
+		for (const t of all.slice(0, -1)) await setWishlistReady(db, t, true);
+		await runDraw(db, admin);
+		expect((await setWishlistReady(db, all.at(-1)!, true)).notifyOrganizer).toBeNull();
+	});
+
+	it('la vista del partecipante espone lo stato "pronta"', async () => {
+		await setupFamily();
+		const [t] = await tokens();
+		expect((await getInviteView(db, t))?.me.ready).toBe(false);
+		await setWishlistReady(db, t, true);
+		expect((await getInviteView(db, t))?.me.ready).toBe(true);
 	});
 });

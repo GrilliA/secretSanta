@@ -30,7 +30,20 @@ export function normalizeEmail(email: string) {
 	return email.trim().toLowerCase();
 }
 
-export function buildInvites(participants: readonly InviteParticipant[]): Invite[] {
+/** `wishlist` = fase 1 (scrivi la lista), `draw` = fase 2 (apri la busta). */
+export type InviteKind = 'wishlist' | 'draw';
+
+function subjectFor(kind: InviteKind, name: string, managed: boolean) {
+	if (kind === 'wishlist') {
+		return managed ? `Scrivi la lista dei desideri di ${name}` : 'Scrivi la tua lista dei desideri';
+	}
+	return managed ? `Il Secret Santa di ${name}` : 'Il tuo Secret Santa';
+}
+
+export function buildInvites(
+	participants: readonly InviteParticipant[],
+	kind: InviteKind = 'draw'
+): Invite[] {
 	const byId = new Map(participants.map((p) => [p.id, p]));
 
 	return participants.map((p) => {
@@ -41,7 +54,7 @@ export function buildInvites(participants: readonly InviteParticipant[]): Invite
 		return {
 			participantId: p.id,
 			to: normalizeEmail(manager ? manager.email : p.email),
-			subject: manager ? `Il Secret Santa di ${p.name}` : 'Il tuo Secret Santa',
+			subject: subjectFor(kind, p.name, Boolean(manager)),
 			forName: p.name,
 			managerName: manager?.name ?? null,
 			token: p.token

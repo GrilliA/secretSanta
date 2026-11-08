@@ -15,6 +15,13 @@
       "when": 1794163784061,
       "tag": "0001_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794171651715,
+      "tag": "0002_wishlist_phase",
+      "breakpoints": true
     }
   ]
 }

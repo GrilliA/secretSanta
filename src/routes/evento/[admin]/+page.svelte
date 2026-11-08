@@ -15,11 +15,26 @@
 	const nameOf = (id: string) => byId.get(id)?.name ?? '?';
 	const managers = $derived(data.participants.filter((p) => !p.managedById));
 	const opened = $derived(data.participants.filter((p) => p.inviteOpenedAt).length);
+	const total = $derived(data.participants.length);
+	const ready = $derived(data.participants.filter((p) => p.wishlistReadyAt).length);
+	const notInvited = $derived(data.participants.filter((p) => !p.wishlistInvitedAt).length);
+	const anyInvited = $derived(notInvited < total);
 
 	const countLabel = $derived(
-		(data.participants.length === 1 ? '1 persona' : `${data.participants.length} persone`) +
-			(drawn ? ` · ${opened} hanno aperto l’invito` : '')
+		(total === 1 ? '1 persona' : `${total} persone`) +
+			(drawn ? ` · ${opened} hanno aperto la busta` : anyInvited ? ` · ${ready} liste pronte` : '')
 	);
+
+	/** Stato della riga nella fase in corso. */
+	function statusOf(p: (typeof data.participants)[number]) {
+		if (drawn) {
+			if (p.inviteOpenedAt) return { label: 'Busta aperta', ok: true };
+			return { label: p.inviteSentAt ? 'Busta inviata' : 'Non inviata', ok: false };
+		}
+		if (p.wishlistReadyAt) return { label: 'Lista pronta', ok: true };
+		if (p.wishlistInvitedAt) return { label: 'Sta scrivendo la lista', ok: false };
+		return null;
+	}
 
 	let managedBy = $state('');
 	let newPhotoPreview = $state<string | null>(null);
@@ -80,9 +95,14 @@
 	};
 
 	const confirmDraw = (e: SubmitEvent) => {
+		const missing = total - ready;
+		const warning =
+			anyInvited && missing > 0
+				? `${missing === 1 ? '1 persona non ha' : `${missing} persone non hanno`} ancora finito la lista. `
+				: '';
 		if (
 			!confirm(
-				`Estrarre e inviare ${data.participants.length} inviti? Dopo non potrai più modificare i partecipanti.`
+				`${warning}Estrarre e inviare ${total} buste? Dopo non potrai più modificare i partecipanti.`
 			)
 		)
 			e.preventDefault();
@@ -206,18 +226,23 @@
 						{#if p.managedById}
 							<span class="badge">Gestito da {nameOf(p.managedById)} · mail separata</span>
 						{/if}
-						{#if drawn}
-							<span class="status" class:ok={p.inviteOpenedAt}>
-								{p.inviteOpenedAt ? 'Aperto' : p.inviteSentAt ? 'Inviato' : 'Non inviato'}
-							</span>
+						{#if statusOf(p)}
+							{@const st = statusOf(p)!}
+							<span class="status" class:ok={st.ok}>{st.label}</span>
 						{/if}
 					</div>
-					{#if drawn}
+					{#if drawn || p.wishlistInvitedAt}
 						<form method="POST" action="?/resend" use:enhance={submit}>
 							<input type="hidden" name="id" value={p.id} />
-							<button class="text-btn" type="submit" disabled={busy}>Rimanda</button>
+							<button
+								class="text-btn"
+								type="submit"
+								disabled={busy}
+								aria-label="Rimanda l’invito a {p.name}">Rimanda</button
+							>
 						</form>
-					{:else}
+					{/if}
+					{#if !drawn}
 						<form method="POST" action="?/remove" use:enhance={submit}>
 							<input type="hidden" name="id" value={p.id} />
 							<button type="submit" class="icon-btn" aria-label="Rimuovi {p.name}" disabled={busy}>
@@ -350,17 +375,64 @@
 					{/if}
 					<small>Nessuno, nemmeno tu, può vedere gli abbinamenti.</small>
 				{:else}
-					<span class="cta-title">Pronti a pescare?</span>
-					<form method="POST" action="?/draw" use:enhance={submit} onsubmit={confirmDraw}>
-						<button
-							class="btn btn-cream"
-							type="submit"
-							disabled={busy || data.participants.length < 3}
-						>
-							{busy ? 'Un attimo…' : `Estrai e invia ${data.participants.length} inviti`}
-						</button>
-					</form>
-					{#if data.participants.length < 3}<small>Servono almeno 3 persone.</small>{/if}
+					<ol class="steps">
+						<li class:done={anyInvited && ready === total}>
+							<span class="step-title">1. Liste dei desideri</span>
+							{#if !anyInvited}
+								<p>Ognuno riceve una mail per scrivere la sua lista.</p>
+							{:else}
+								<div
+									class="meter"
+									role="progressbar"
+									aria-valuemin="0"
+									aria-valuemax={total}
+									aria-valuenow={ready}
+									aria-label="Liste pronte"
+								>
+									<span style:width="{total ? (ready / total) * 100 : 0}%"></span>
+								</div>
+								<p>
+									<strong>{ready} di {total}</strong> liste pronte.
+									{ready === total
+										? 'Tutti hanno finito!'
+										: 'Ti mandiamo una mail quando tutti hanno finito.'}
+								</p>
+							{/if}
+							{#if notInvited > 0}
+								<form method="POST" action="?/inviteWishlist" use:enhance={submit}>
+									<button class="btn btn-cream" type="submit" disabled={busy || total === 0}>
+										{busy
+											? 'Un attimo…'
+											: anyInvited
+												? `Invita ${notInvited === 1 ? 'la persona nuova' : `le ${notInvited} persone nuove`}`
+												: `Invia ${total} inviti per la lista`}
+									</button>
+								</form>
+							{/if}
+						</li>
+						<li>
+							<span class="step-title">2. Estrazione</span>
+							<form method="POST" action="?/draw" use:enhance={submit} onsubmit={confirmDraw}>
+								<button
+									class="btn"
+									class:btn-cream={anyInvited && ready === total}
+									class:btn-ghost={!(anyInvited && ready === total)}
+									type="submit"
+									disabled={busy || total < 3}
+								>
+									{busy ? 'Un attimo…' : `Estrai e invia le buste`}
+								</button>
+							</form>
+							{#if total < 3}<small>Servono almeno 3 persone.</small>{/if}
+						</li>
+					</ol>
+					{#if form && 'invited' in form && typeof form.sent === 'number'}
+						<p class="note">
+							Inviate {form.sent} email{#if form.failed?.length}; non riuscite: {form.failed.join(
+									', '
+								)}{/if}.
+						</p>
+					{/if}
 					<small>Nessuno, nemmeno tu, vedrà gli abbinamenti.</small>
 				{/if}
 			</section>
@@ -715,6 +787,50 @@
 	.cta .note {
 		font-size: 14px;
 		color: var(--gold-300);
+	}
+	.steps {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+	}
+	.steps li {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.steps li + li {
+		padding-top: 18px;
+		border-top: 1px dashed rgba(255, 255, 255, 0.3);
+	}
+	.step-title {
+		font-family: var(--font-display);
+		font-weight: 600;
+		font-size: 20px;
+		color: var(--gold-300);
+	}
+	.steps li.done .step-title::after {
+		content: ' ✓';
+	}
+	.meter {
+		height: 8px;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.2);
+		overflow: hidden;
+	}
+	.meter span {
+		display: block;
+		height: 100%;
+		background: var(--gold);
+		border-radius: 4px;
+		transition: width 0.4s ease;
+	}
+	.btn-ghost {
+		background: transparent;
+		color: #fff;
+		border: 1.5px solid rgba(255, 255, 255, 0.6);
 	}
 	.cta-title {
 		font-family: var(--font-display);
