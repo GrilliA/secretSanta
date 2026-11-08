@@ -34,11 +34,11 @@ export interface PhotoInput {
  */
 export async function readPhoto(value: FormDataEntryValue | null): Promise<PhotoInput | null> {
 	if (!value || typeof value === 'string' || value.size === 0) return null;
-	if (value.size > MAX_PHOTO_BYTES) throw new EventError('La foto è troppo grande (max 1,5 MB).');
+	if (value.size > MAX_PHOTO_BYTES) throw new EventError((t) => t.errors.photoTooBig);
 
 	const bytes = new Uint8Array(await value.arrayBuffer());
 	const kind = SIGNATURES.find((s) => s.test(bytes));
-	if (!kind) throw new EventError('Formato non supportato: usa una foto JPG, PNG o WebP.');
+	if (!kind) throw new EventError((t) => t.errors.photoFormat);
 
 	return { mime: kind.mime, data: Buffer.from(bytes).toString('base64') };
 }

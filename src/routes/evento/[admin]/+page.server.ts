@@ -7,25 +7,28 @@ import {
 	addParticipant,
 	getAdminView,
 	getInviteParticipants,
+	localeForAdmin,
 	removeExclusion,
 	removeParticipant,
 	runDraw,
 	setPhoto
 } from '#lib/server/events.ts';
 import { readPhoto } from '#lib/server/photos.ts';
+import { getT, toLocale } from '#lib/i18n/index.ts';
 import { appOrigin } from '#lib/server/origin.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url }) => {
 	const view = await getAdminView(await getDb(), params.admin);
 	if (!view) error(404, 'Evento non trovato');
-	return { ...view, isNew: url.searchParams.has('nuovo') };
+	return { ...view, locale: toLocale(view.event.locale), isNew: url.searchParams.has('nuovo') };
 };
 
 export const actions: Actions = {
 	add: async ({ params, request }) => {
 		const data = await request.formData();
 		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
 		return guard(async () => {
 			await addParticipant(db, params.admin, {
 				name: field(data, 'name'),
@@ -34,82 +37,89 @@ export const actions: Actions = {
 				photo: await readPhoto(data.get('photo'))
 			});
 			return { ok: true };
-		});
+		}, lang);
 	},
 
 	photo: async ({ params, request }) => {
 		const data = await request.formData();
 		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
 		return guard(async () => {
 			const input = await readPhoto(data.get('photo'));
-			if (!input) return fail(400, { error: 'Scegli una foto.' });
+			if (!input) return fail(400, { error: getT(await lang()).errors.photoMissing });
 			await setPhoto(db, params.admin, field(data, 'id'), input);
 			return { ok: true };
-		});
+		}, lang);
 	},
 
 	remove: async ({ params, request }) => {
 		const data = await request.formData();
 		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
 		return guard(async () => {
 			await removeParticipant(db, params.admin, field(data, 'id'));
 			return { ok: true };
-		});
+		}, lang);
 	},
 
 	exclude: async ({ params, request }) => {
 		const data = await request.formData();
 		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
 		return guard(async () => {
 			await addExclusion(db, params.admin, field(data, 'a'), field(data, 'b'));
 			return { ok: true };
-		});
+		}, lang);
 	},
 
 	unexclude: async ({ params, request }) => {
 		const data = await request.formData();
 		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
 		return guard(async () => {
 			await removeExclusion(db, params.admin, field(data, 'a'), field(data, 'b'));
 			return { ok: true };
-		});
+		}, lang);
 	},
 
 	draw: async ({ params, url }) => {
 		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
 		return guard(async () => {
 			const { event, participants } = await runDraw(db, params.admin);
 			const result = await sendInvites(db, appOrigin(url), event, participants);
 			return { drawn: true, ...result };
-		});
+		}, lang);
 	},
 
 	/** Fase 1: invita a scrivere la lista chi non ha ancora ricevuto l'invito. */
 	inviteWishlist: async ({ params, url }) => {
 		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
 		return guard(async () => {
 			const { event, kind, participants, sendTo } = await getInviteParticipants(db, params.admin, {
 				onlyNotInvited: true
 			});
-			if (kind !== 'wishlist') return fail(400, { error: 'L’estrazione è già stata fatta.' });
-			if (sendTo.length === 0) return fail(400, { error: 'Hanno già ricevuto tutti l’invito.' });
+			if (kind !== 'wishlist') return fail(400, { error: getT(event.locale).errors.alreadyDrawn });
+			if (sendTo.length === 0) return fail(400, { error: getT(event.locale).errors.allInvited });
 			const result = await sendInvites(db, appOrigin(url), event, participants, sendTo, kind);
 			return { invited: true, ...result };
-		});
+		}, lang);
 	},
 
 	/** Rimanda l'invito della fase in corso (lista prima dell'estrazione, busta dopo). */
 	resend: async ({ params, request, url }) => {
 		const data = await request.formData();
 		const id = field(data, 'id');
-		if (!id) return fail(400, { error: 'Partecipante mancante.' });
 		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		if (!id) return fail(400, { error: getT(await lang()).errors.missingParticipant });
 		return guard(async () => {
 			const { event, kind, participants, sendTo } = await getInviteParticipants(db, params.admin, {
 				onlyIds: [id]
 			});
 			const result = await sendInvites(db, appOrigin(url), event, participants, sendTo, kind);
 			return { resent: true, ...result };
-		});
+		}, lang);
 	}
 };

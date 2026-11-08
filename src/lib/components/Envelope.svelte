@@ -4,7 +4,11 @@
 	/**
 	 * Busta animata: chiusa (dondola) → `opening` (sigillo, lembo, biglietto) → `onopened`.
 	 */
-	let { opening = false, onopened }: { opening?: boolean; onopened?: () => void } = $props();
+	let {
+		opening = false,
+		onopened,
+		letter = 'Quest’anno fai il regalo a…'
+	}: { opening?: boolean; onopened?: () => void; letter?: string } = $props();
 
 	function handleEnd(e: AnimationEvent) {
 		if (e.animationName.endsWith('away')) onopened?.();
@@ -14,7 +18,7 @@
 <div class="env" class:opening class:closed={!opening} onanimationend={handleEnd}>
 	<div class="back"></div>
 	<div class="letter">
-		<span>Quest’anno fai il regalo a…</span>
+		<span>{letter}</span>
 	</div>
 	<svg class="pocket" viewBox="0 0 360 240" preserveAspectRatio="none" aria-hidden="true">
 		<path

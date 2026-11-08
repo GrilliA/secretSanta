@@ -11,6 +11,7 @@ export const esc = (s: string) =>
 	);
 
 export interface LayoutInput {
+	lang?: string;
 	subject: string;
 	eyebrow?: string | null;
 	/** Titolo già in HTML (escapato dal chiamante). */
@@ -33,7 +34,7 @@ export function renderLayout(d: LayoutInput) {
 		.join('');
 
 	return `<!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(d.subject)}</title></head>
+<html lang="${d.lang ?? 'it'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(d.subject)}</title></head>
 <body style="margin:0;background:#EFE6D6;font-family:Inter,Helvetica,Arial,sans-serif;color:#1E1A16">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE6D6;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#FBF4E8;border-radius:16px;overflow:hidden">

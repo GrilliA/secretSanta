@@ -326,3 +326,39 @@ describe('fase lista dei desideri', () => {
 		expect((await getInviteView(db, t))?.me.ready).toBe(true);
 	});
 });
+
+describe('lingua dell’evento', () => {
+	it('salva la lingua e traduce gli errori', async () => {
+		const ev = await createEvent(db, {
+			name: 'Navidad',
+			organizerName: 'Ana',
+			organizerEmail: 'ana@a.es',
+			organizerPlays: true,
+			locale: 'es'
+		});
+		const { localeForAdmin, localeForToken } = await import('./events.ts');
+		expect(await localeForAdmin(db, ev.adminToken)).toBe('es');
+		const [p] = await db.query.participant.findMany();
+		expect(await localeForToken(db, p.token)).toBe('es');
+		expect((await getInviteView(db, p.token))?.event.locale).toBe('es');
+
+		const err = await addParticipant(db, ev.adminToken, { name: 'X', email: 'nope' }).catch(
+			(e) => e
+		);
+		const { getT } = await import('#lib/i18n/index.ts');
+		expect(err.render(getT('es'))).toBe('Email no válido.');
+		expect(err.message).toBe('Email non valida.');
+	});
+
+	it('lingua sconosciuta → italiano', async () => {
+		const ev = await createEvent(db, {
+			name: 'X',
+			organizerName: 'A',
+			organizerEmail: 'a@a.it',
+			organizerPlays: false,
+			locale: 'fr'
+		});
+		const { localeForAdmin } = await import('./events.ts');
+		expect(await localeForAdmin(db, ev.adminToken)).toBe('it');
+	});
+});

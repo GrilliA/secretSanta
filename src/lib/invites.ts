@@ -1,3 +1,5 @@
+import { getT, type Messages } from '#lib/i18n/index.ts';
+
 /**
  * Calcolo degli inviti da spedire.
  *
@@ -33,16 +35,16 @@ export function normalizeEmail(email: string) {
 /** `wishlist` = fase 1 (scrivi la lista), `draw` = fase 2 (apri la busta). */
 export type InviteKind = 'wishlist' | 'draw';
 
-function subjectFor(kind: InviteKind, name: string, managed: boolean) {
-	if (kind === 'wishlist') {
-		return managed ? `Scrivi la lista dei desideri di ${name}` : 'Scrivi la tua lista dei desideri';
-	}
-	return managed ? `Il Secret Santa di ${name}` : 'Il tuo Secret Santa';
+function subjectFor(t: Messages, kind: InviteKind, name: string, managed: boolean) {
+	const s = t.email.subjects;
+	if (kind === 'wishlist') return managed ? s.wishlistManaged(name) : s.wishlist;
+	return managed ? s.drawManaged(name) : s.draw;
 }
 
 export function buildInvites(
 	participants: readonly InviteParticipant[],
-	kind: InviteKind = 'draw'
+	kind: InviteKind = 'draw',
+	t: Messages = getT('it')
 ): Invite[] {
 	const byId = new Map(participants.map((p) => [p.id, p]));
 
@@ -54,7 +56,7 @@ export function buildInvites(
 		return {
 			participantId: p.id,
 			to: normalizeEmail(manager ? manager.email : p.email),
-			subject: subjectFor(kind, p.name, Boolean(manager)),
+			subject: subjectFor(t, kind, p.name, Boolean(manager)),
 			forName: p.name,
 			managerName: manager?.name ?? null,
 			token: p.token

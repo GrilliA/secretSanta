@@ -1,17 +1,27 @@
+import { getT, type Messages } from '#lib/i18n/index.ts';
 import { esc, renderLayout } from './layout.ts';
 
+const em = (s: string) => `<em style="color:#F3D27A;font-weight:600">${esc(s)}</em>`;
+
 /** Email all'organizzatore con il link segreto per gestire l'evento. */
-export function renderAdminEmail(d: { organizerName: string; eventName: string; link: string }) {
-	const subject = `Gestisci “${d.eventName}”`;
+export function renderAdminEmail(d: {
+	organizerName: string;
+	eventName: string;
+	link: string;
+	t?: Messages;
+}) {
+	const t = d.t ?? getT('it');
+	const a = t.email.admin;
+	const subject = t.email.subjects.admin(d.eventName);
 	const html = renderLayout({
+		lang: t.locale,
 		subject,
-		titleHtml: `Ciao ${esc(d.organizerName)}, il tuo Secret Santa è pronto!`,
-		bodyHtml: `Da questo link aggiungi i partecipanti, mandi gli inviti per la lista dei desideri e poi lanci l’estrazione di <strong>${esc(d.eventName)}</strong>. Conservalo: è l’unico modo per gestire l’evento.`,
-		cta: { label: 'Gestisci l’evento', href: d.link },
-		footnote: 'Tranquillo: da qui non potrai vedere chi ha pescato chi.'
+		titleHtml: esc(a.title(d.organizerName)),
+		bodyHtml: `${esc(a.body)} <strong>${esc(d.eventName)}</strong>. ${esc(a.body2)}`,
+		cta: { label: a.cta, href: d.link },
+		footnote: a.footnote
 	});
-	const text = `Ciao ${d.organizerName}, il tuo Secret Santa "${d.eventName}" è pronto.\nGestiscilo da qui (conserva il link): ${d.link}`;
-	return { subject, html, text };
+	return { subject, html, text: a.text(d.organizerName, d.eventName, d.link) };
 }
 
 /** Avviso all'organizzatore: tutte le liste sono pronte, si può estrarre. */
@@ -20,16 +30,19 @@ export function renderAllReadyEmail(d: {
 	eventName: string;
 	count: number;
 	link: string;
+	t?: Messages;
 }) {
-	const subject = `Tutte le liste sono pronte: puoi fare l’estrazione!`;
+	const t = d.t ?? getT('it');
+	const r = t.email.allReady;
+	const subject = t.email.subjects.allReady;
 	const html = renderLayout({
+		lang: t.locale,
 		subject,
 		eyebrow: d.eventName,
-		titleHtml: `Ciao ${esc(d.organizerName)}, è il momento di <em style="color:#F3D27A;font-weight:600">pescare!</em>`,
-		bodyHtml: `Tutte le ${d.count} persone hanno scritto la loro lista dei desideri. Apri la pagina dell’evento e premi <strong>“Estrai e invia”</strong>: ognuno riceverà la sua busta.`,
-		cta: { label: 'Vai all’estrazione', href: d.link },
-		footnote: 'Nessuno, nemmeno tu, vedrà gli abbinamenti.'
+		titleHtml: `${esc(r.title(d.organizerName))} ${em(r.titleEm)}`,
+		bodyHtml: `${esc(r.body(d.count))} <strong>${esc(r.bodyButton)}</strong>: ${esc(r.body2)}`,
+		cta: { label: r.cta, href: d.link },
+		footnote: r.footnote
 	});
-	const text = `Tutte le liste di "${d.eventName}" sono pronte (${d.count} persone).\nFai l'estrazione da qui: ${d.link}`;
-	return { subject, html, text };
+	return { subject, html, text: r.text(d.eventName, d.count, d.link) };
 }

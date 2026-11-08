@@ -61,6 +61,16 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
   (`#lib/photo-client.ts`), il server valida i byte reali (`#lib/server/photos.ts`) e le salva in base64
   nella tabella `photo`. Servite da `/foto/[photoId]` con cache immutable: l'id cambia a ogni sostituzione.
 
+## Lingue (it / es)
+
+- Dizionari in `src/lib/i18n/it.ts` (riferimento) e `es.ts` (stessa forma, controllata da TS e da `i18n.spec.ts`).
+  **Ogni nuovo testo va aggiunto in entrambi**: niente stringhe italiane scritte direttamente nei componenti.
+- Ogni evento ha `event.locale`: email, pagina di gestione e pagina dell'invito usano `getT(locale)`.
+- Pagina iniziale ed errori: lingua dell'interfaccia da `?lang=` → cookie → Accept-Language (`hooks.server.ts`,
+  `locals.locale`, `+layout.server.ts` → `uiLocale`).
+- Errori di dominio: `new EventError((t) => t.errors.xxx)`; `guard(fn, () => locale)` li traduce.
+- In spagnolo il gioco si chiama "Amigo Invisible".
+
 ## Flusso in due fasi
 
 1. **Lista dei desideri**: l'organizzatore invia gli inviti "Scrivi la tua lista" (`?/inviteWishlist`, solo a chi non

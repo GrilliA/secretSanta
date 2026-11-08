@@ -6,18 +6,23 @@
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import Hills from '#lib/components/Hills.svelte';
 	import { formatDay } from '#lib/format.ts';
+	import { getT } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
 	let phase = $state<'closed' | 'opening' | 'revealed'>('closed');
-	const day = $derived(formatDay(data.event.exchangeDate));
-	const ownTitle = $derived(
-		data.managerName ? `La lista di ${data.me.name}` : 'La tua lista dei desideri'
-	);
+	const t = $derived(getT(data.event.locale));
+	const i = $derived(t.invite);
+	const day = $derived(formatDay(data.event.exchangeDate, t.intlLocale));
+	const ownTitle = $derived(data.managerName ? i.ownTitleManaged(data.me.name) : i.ownTitle);
+
+	$effect(() => {
+		document.documentElement.lang = t.locale;
+	});
 </script>
 
-<svelte:head><title>Il tuo Secret Santa · {data.event.name}</title></svelte:head>
+<svelte:head><title>{i.pageTitle(data.event.name)}</title></svelte:head>
 
 <div class="page">
 	<section class="hero snow" class:tall={data.receiver && phase !== 'revealed'}>
@@ -26,42 +31,44 @@
 			<div class="top">
 				<div class="brand"><GiftIcon size={28} color="var(--gold-300)" /> {data.event.name}</div>
 				{#if data.managerName}
-					<span class="pill">Stai vedendo l’invito di {data.me.name}</span>
+					<span class="pill">{i.viewingFor(data.me.name)}</span>
 				{/if}
 			</div>
 
 			{#if !data.receiver}
 				<div class="closed">
-					<span class="lead">Ciao {data.me.name}!</span>
+					<span class="lead">{i.hello(data.me.name)}</span>
 					{#if data.me.ready}
-						<h1 class="wait">La tua lista è pronta. Ora si aspetta la busta!</h1>
+						<h1 class="wait">{i.readyTitle}</h1>
 						<p class="wait-text">
-							Quando tutti avranno finito, {data.event.organizerName} farà l’estrazione e ti arriverà
-							una mail per scoprire a chi fare il regalo. Puoi ancora modificare la lista qui sotto.
+							{i.readyText(data.event.organizerName)}
 						</p>
 					{:else}
-						<h1 class="wait">Che cosa vorresti trovare sotto l’albero?</h1>
+						<h1 class="wait">{i.writeTitle}</h1>
 						<p class="wait-text">
-							Scrivi qui sotto la tua lista dei desideri: la vedrà solo chi ti farà il regalo.
-							Quando hai finito, premi “La mia lista è pronta”.
+							{i.writeText}
 						</p>
 					{/if}
 					{#if data.event.message}<p class="wait-text quote">“{data.event.message}”</p>{/if}
 				</div>
 			{:else if phase !== 'revealed'}
 				<div class="closed">
-					<span class="lead">{data.me.name}, c’è una busta per te</span>
-					<Envelope opening={phase === 'opening'} onopened={() => (phase = 'revealed')} />
+					<span class="lead">{i.envelopeFor(data.me.name)}</span>
+					<Envelope
+						opening={phase === 'opening'}
+						onopened={() => (phase = 'revealed')}
+						letter={i.envelopeLetter}
+					/>
 					<button
 						class="btn btn-cream"
 						type="button"
 						disabled={phase === 'opening'}
-						onclick={() => (phase = 'opening')}>Apri la busta</button
+						onclick={() => (phase = 'opening')}>{i.open}</button
 					>
 				</div>
 			{:else}
 				<div class="reveal" aria-live="polite">
-					<span class="lead fadein">Ciao {data.me.name}, quest’anno fai il regalo a…</span>
+					<span class="lead fadein">{i.youGiftTo(data.me.name)}</span>
 					<div class="who">
 						<div class="face pop">
 							<Avatar
@@ -69,15 +76,16 @@
 								photoId={data.receiver.photoId}
 								size={176}
 								tone="pine"
+								alt={i.photoOf(data.receiver.name)}
 							/>
 						</div>
 						<div class="who-text">
 							<h1 class="fadein late">{data.receiver.name}</h1>
 							<div class="facts fadein late">
-								{#if data.event.budget}<span>Budget {data.event.budget}</span>{/if}
-								{#if day}<span>Scambio il {day}</span>{/if}
+								{#if data.event.budget}<span>{t.common.budget} {data.event.budget}</span>{/if}
+								{#if day}<span>{t.common.exchangeOn(day)}</span>{/if}
 								<button type="button" class="replay" onclick={() => (phase = 'closed')}>
-									Riapri la busta
+									{i.reopen}
 								</button>
 							</div>
 						</div>
@@ -101,7 +109,7 @@
 		<main class="container lists fadein late" class:stacked={data.receiver}>
 			{#if data.receiver}
 				<section class="card">
-					<h2>I desideri di {data.receiver.name}</h2>
+					<h2>{i.wishesOf(data.receiver.name)}</h2>
 					{#if data.receiver.wishes.length}
 						<ul class="wishes">
 							{#each data.receiver.wishes as w (w)}
@@ -120,17 +128,15 @@
 							{/each}
 						</ul>
 					{:else}
-						<p class="muted">Non ha scritto desideri: vai di fantasia!</p>
+						<p class="muted">{i.noWishes}</p>
 					{/if}
-					<p class="secret">Shh… è un segreto: non dirlo a {data.receiver.name}!</p>
+					<p class="secret">{i.secret(data.receiver.name)}</p>
 				</section>
 			{/if}
 
 			{#snippet ownList()}
 				<p class="muted">
-					{data.managerName
-						? `La vede solo chi fa il regalo a ${data.me.name}. La compili tu per conto suo.`
-						: 'La vede solo chi ti fa il regalo.'}
+					{data.managerName ? i.ownHintManaged(data.me.name) : i.ownHint}
 				</p>
 				{#if data.me.wishes.length}
 					<ul class="wishes">
@@ -139,7 +145,7 @@
 								<span class="wish-text">{w.text}</span>
 								<form method="POST" action="?/removeWish" use:enhance>
 									<input type="hidden" name="id" value={w.id} />
-									<button type="submit" class="icon-btn" aria-label="Rimuovi {w.text}">
+									<button type="submit" class="icon-btn" aria-label={i.removeWish(w.text)}>
 										<svg
 											width="16"
 											height="16"
@@ -157,16 +163,16 @@
 					</ul>
 				{/if}
 				<form class="wish-form" method="POST" action="?/addWish" use:enhance>
-					<label class="sr-only" for="wish">Aggiungi un desiderio</label>
+					<label class="sr-only" for="wish">{i.addWish}</label>
 					<input
 						id="wish"
 						name="text"
 						class="input"
-						placeholder="Aggiungi un desiderio…"
+						placeholder={i.addWishPlaceholder}
 						maxlength="140"
 						required
 					/>
-					<button class="btn btn-pine" type="submit">Aggiungi</button>
+					<button class="btn btn-pine" type="submit">{t.common.add}</button>
 				</form>
 				{#if form?.error}<p class="err" role="alert">{form.error}</p>{/if}
 				{#if !data.receiver}
@@ -185,15 +191,15 @@
 									stroke-linejoin="round"
 									aria-hidden="true"><path d="M5 12l5 5L19 7" /></svg
 								>
-								Lista pronta
+								{i.ready}
 							</p>
-							<button class="text-btn" type="submit">Devo ancora aggiungere qualcosa</button>
+							<button class="text-btn" type="submit">{i.notReady}</button>
 						{:else}
 							<button class="btn btn-primary" type="submit" disabled={data.me.wishes.length === 0}>
-								La mia lista è pronta
+								{i.markReady}
 							</button>
 							{#if data.me.wishes.length === 0}
-								<small class="muted">Aggiungi almeno un desiderio.</small>
+								<small class="muted">{i.needOne}</small>
 							{/if}
 						{/if}
 					</form>
@@ -205,12 +211,9 @@
 					<summary>
 						<span>
 							<strong>{ownTitle}</strong>
-							<small
-								>{data.me.wishes.length}
-								{data.me.wishes.length === 1 ? 'desiderio' : 'desideri'}</small
-							>
+							<small>{t.common.wishes(data.me.wishes.length)}</small>
 						</span>
-						<span class="edit">Modifica</span>
+						<span class="edit">{i.edit}</span>
 					</summary>
 					{@render ownList()}
 				</details>

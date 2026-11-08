@@ -5,7 +5,8 @@
 		photoId = null,
 		src = null,
 		size = 40,
-		tone = 'cream'
+		tone = 'cream',
+		alt = null
 	}: {
 		name: string;
 		photoId?: string | null;
@@ -13,6 +14,8 @@
 		src?: string | null;
 		size?: number;
 		tone?: 'cream' | 'pine' | 'holly';
+		/** Testo alternativo della foto (tradotto dalla pagina). */
+		alt?: string | null;
 	} = $props();
 
 	const url = $derived(src ?? (photoId ? `/foto/${photoId}` : null));
@@ -25,7 +28,7 @@
 	style:font-size="{Math.round(size * 0.4)}px"
 >
 	{#if url}
-		<img src={url} alt="Foto di {name}" width={size} height={size} loading="lazy" />
+		<img src={url} alt={alt ?? name} width={size} height={size} loading="lazy" />
 	{:else}
 		<span aria-hidden="true">{name.trim()[0]?.toUpperCase() ?? '?'}</span>
 	{/if}

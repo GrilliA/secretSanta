@@ -6,9 +6,16 @@
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import { preparePhoto, replaceInputFile } from '#lib/photo-client.ts';
 	import { formatDay } from '#lib/format.ts';
+	import { getT } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+	const t = $derived(getT(data.locale));
+	const a = $derived(t.admin);
+
+	$effect(() => {
+		document.documentElement.lang = t.locale;
+	});
 
 	const drawn = $derived(Boolean(data.event.drawnAt));
 	const byId = $derived(new Map(data.participants.map((p) => [p.id, p])));
@@ -21,18 +28,17 @@
 	const anyInvited = $derived(notInvited < total);
 
 	const countLabel = $derived(
-		(total === 1 ? '1 persona' : `${total} persone`) +
-			(drawn ? ` · ${opened} hanno aperto la busta` : anyInvited ? ` · ${ready} liste pronte` : '')
+		t.common.people(total) + (drawn ? a.openedCount(opened) : anyInvited ? a.readyCount(ready) : '')
 	);
 
 	/** Stato della riga nella fase in corso. */
 	function statusOf(p: (typeof data.participants)[number]) {
 		if (drawn) {
-			if (p.inviteOpenedAt) return { label: 'Busta aperta', ok: true };
-			return { label: p.inviteSentAt ? 'Busta inviata' : 'Non inviata', ok: false };
+			if (p.inviteOpenedAt) return { label: a.status.opened, ok: true };
+			return { label: p.inviteSentAt ? a.status.sent : a.status.notSent, ok: false };
 		}
-		if (p.wishlistReadyAt) return { label: 'Lista pronta', ok: true };
-		if (p.wishlistInvitedAt) return { label: 'Sta scrivendo la lista', ok: false };
+		if (p.wishlistReadyAt) return { label: a.status.ready, ok: true };
+		if (p.wishlistInvitedAt) return { label: a.status.writing, ok: false };
 		return null;
 	}
 
@@ -55,7 +61,7 @@
 				newPhotoPreview = URL.createObjectURL(prepared);
 			}
 		} catch {
-			photoError = 'Non riesco a leggere questa immagine: prova con un’altra foto.';
+			photoError = a.photoError;
 			input.value = '';
 		}
 	}
@@ -96,22 +102,14 @@
 
 	const confirmDraw = (e: SubmitEvent) => {
 		const missing = total - ready;
-		const warning =
-			anyInvited && missing > 0
-				? `${missing === 1 ? '1 persona non ha' : `${missing} persone non hanno`} ancora finito la lista. `
-				: '';
-		if (
-			!confirm(
-				`${warning}Estrarre e inviare ${total} buste? Dopo non potrai più modificare i partecipanti.`
-			)
-		)
-			e.preventDefault();
+		const warning = anyInvited && missing > 0 ? a.confirmMissing(missing) : '';
+		if (!confirm(`${warning}${a.confirmDraw(total)}`)) e.preventDefault();
 	};
 
 	const xIcon = 'M6 6l12 12M18 6L6 18';
 </script>
 
-<svelte:head><title>Gestisci · {data.event.name}</title></svelte:head>
+<svelte:head><title>{a.pageTitle(data.event.name)}</title></svelte:head>
 
 <div class="page">
 	<header class="head snow">
@@ -119,12 +117,12 @@
 			<div class="head-top">
 				<div class="brand"><GiftIcon size={28} /> {data.event.name}</div>
 				<div class="progress">
-					<span>Passo {drawn ? 3 : 2} di 3</span>
+					<span>{a.stepOf(drawn ? 3 : 2)}</span>
 					<i class="on"></i><i class="on"></i><i class:on={drawn}></i>
 				</div>
 			</div>
 			<div class="title">
-				<a href={resolve('/')} class="back" aria-label="Crea un altro evento">
+				<a href={resolve('/')} class="back" aria-label={a.back}>
 					<svg
 						width="20"
 						height="20"
@@ -137,13 +135,14 @@
 						aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg
 					>
 				</a>
-				<h1>{drawn ? 'Inviti partiti!' : 'Chi partecipa?'}</h1>
+				<h1>{drawn ? a.titleDrawn : a.title}</h1>
 			</div>
 			{#if data.event.exchangeDate || data.event.budget}
 				<div class="facts">
-					{#if data.event.exchangeDate}<span>Scambio il {formatDay(data.event.exchangeDate)}</span
+					{#if data.event.exchangeDate}<span
+							>{t.common.exchangeOn(formatDay(data.event.exchangeDate, t.intlLocale) ?? '')}</span
 						>{/if}
-					{#if data.event.budget}<span>Budget {data.event.budget}</span>{/if}
+					{#if data.event.budget}<span>{t.common.budget} {data.event.budget}</span>{/if}
 				</div>
 			{/if}
 		</div>
@@ -155,16 +154,13 @@
 	<main class="container layout">
 		<section class="save card">
 			<div>
-				<strong>{data.isNew ? 'Evento creato!' : 'Il tuo link di gestione'}</strong>
-				<p>
-					Salva questo link: è l’unico modo per gestire l’evento. Te l’abbiamo mandato anche a
-					{data.event.organizerEmail}.
-				</p>
+				<strong>{data.isNew ? a.created : a.yourLink}</strong>
+				<p>{a.saveLink(data.event.organizerEmail)}</p>
 			</div>
 			<div class="link-row">
-				<input class="input" readonly value={adminLink} aria-label="Link di gestione" />
+				<input class="input" readonly value={adminLink} aria-label={a.linkLabel} />
 				<button type="button" class="btn btn-pine" onclick={copyLink}
-					>{copied ? 'Copiato!' : 'Copia'}</button
+					>{copied ? a.copied : a.copy}</button
 				>
 			</div>
 		</section>
@@ -173,7 +169,7 @@
 
 		<section class="card list">
 			<div class="list-head">
-				<h2>Partecipanti</h2>
+				<h2>{a.participants}</h2>
 				<span>{countLabel}</span>
 			</div>
 
@@ -187,7 +183,7 @@
 						use:enhance={submit}
 					>
 						<input type="hidden" name="id" value={p.id} />
-						<label title={p.photoId ? 'Cambia foto' : 'Aggiungi foto'}>
+						<label title={p.photoId ? a.changePhoto : a.addPhoto}>
 							<Avatar
 								name={p.name}
 								photoId={p.photoId}
@@ -211,7 +207,7 @@
 								type="file"
 								name="photo"
 								accept="image/*"
-								aria-label="{p.photoId ? 'Cambia' : 'Aggiungi'} la foto di {p.name}"
+								aria-label={a.photoInputLabel(Boolean(p.photoId), p.name)}
 								disabled={busy}
 								onchange={(e) => onPhotoChange(e, true)}
 							/>
@@ -220,11 +216,11 @@
 					<div class="info">
 						<span class="pname">
 							{p.name}
-							{#if p.isOrganizer}<small>· organizzatore</small>{/if}
+							{#if p.isOrganizer}<small>{a.organizer}</small>{/if}
 						</span>
 						<span class="pmail">{p.email}</span>
 						{#if p.managedById}
-							<span class="badge">Gestito da {nameOf(p.managedById)} · mail separata</span>
+							<span class="badge">{a.managedBy(nameOf(p.managedById))}</span>
 						{/if}
 						{#if statusOf(p)}
 							{@const st = statusOf(p)!}
@@ -238,14 +234,14 @@
 								class="text-btn"
 								type="submit"
 								disabled={busy}
-								aria-label="Rimanda l’invito a {p.name}">Rimanda</button
+								aria-label={a.resendLabel(p.name)}>{a.resend}</button
 							>
 						</form>
 					{/if}
 					{#if !drawn}
 						<form method="POST" action="?/remove" use:enhance={submit}>
 							<input type="hidden" name="id" value={p.id} />
-							<button type="submit" class="icon-btn" aria-label="Rimuovi {p.name}" disabled={busy}>
+							<button type="submit" class="icon-btn" aria-label={a.remove(p.name)} disabled={busy}>
 								<svg
 									width="18"
 									height="18"
@@ -261,7 +257,7 @@
 					{/if}
 				</div>
 			{:else}
-				<p class="muted">Ancora nessuno. Aggiungi la prima persona qui sotto.</p>
+				<p class="muted">{a.empty}</p>
 			{/each}
 
 			{#if photoError}<p class="err" role="alert">{photoError}</p>{/if}
@@ -275,7 +271,7 @@
 				>
 					<label class="photo-field">
 						<Avatar name="+" src={newPhotoPreview} size={56} />
-						<span>{newPhotoPreview ? 'Cambia foto' : 'Foto'}<small>facoltativa</small></span>
+						<span>{newPhotoPreview ? a.changePhoto : a.photo}<small>{a.photoOptional}</small></span>
 						<input
 							class="sr-only"
 							type="file"
@@ -285,32 +281,32 @@
 						/>
 					</label>
 					<div class="field">
-						<label for="pnome">Nome</label>
-						<input id="pnome" name="name" class="input" placeholder="es. Sara" required />
+						<label for="pnome">{a.name}</label>
+						<input id="pnome" name="name" class="input" placeholder={a.namePlaceholder} required />
 					</div>
 					<div class="field">
-						<label for="pmgr">L’invito arriva a</label>
+						<label for="pmgr">{a.inviteGoesTo}</label>
 						<select id="pmgr" name="managedById" class="input" bind:value={managedBy}>
-							<option value="">Alla sua email</option>
+							<option value="">{a.ownEmail}</option>
 							{#each managers as m (m.id)}
-								<option value={m.id}>{m.name} (gestisce l’invito)</option>
+								<option value={m.id}>{a.managerOption(m.name)}</option>
 							{/each}
 						</select>
 					</div>
 					{#if !managedBy}
 						<div class="field grow">
-							<label for="pmail">Email</label>
+							<label for="pmail">{a.email}</label>
 							<input
 								id="pmail"
 								name="email"
 								class="input"
 								type="email"
-								placeholder="anche la stessa di un altro partecipante"
+								placeholder={a.emailPlaceholder}
 								required
 							/>
 						</div>
 					{/if}
-					<button class="btn btn-pine" type="submit" disabled={busy}>Aggiungi</button>
+					<button class="btn btn-pine" type="submit" disabled={busy}>{t.common.add}</button>
 				</form>
 			{/if}
 		</section>
@@ -318,8 +314,8 @@
 		<aside class="side">
 			{#if !drawn}
 				<section class="card">
-					<h2>Esclusioni</h2>
-					<p class="muted">Coppie che non devono pescarsi a vicenda.</p>
+					<h2>{a.exclusions}</h2>
+					<p class="muted">{a.exclusionsHint}</p>
 					{#each data.exclusions as ex (ex.aId + ex.bId)}
 						<form class="excl" method="POST" action="?/unexclude" use:enhance={submit}>
 							<input type="hidden" name="a" value={ex.aId} />
@@ -328,7 +324,7 @@
 							<button
 								type="submit"
 								class="icon-btn"
-								aria-label="Rimuovi esclusione {nameOf(ex.aId)} e {nameOf(ex.bId)}"
+								aria-label={a.removeExclusion(nameOf(ex.aId), nameOf(ex.bId))}
 								disabled={busy}
 							>
 								<svg
@@ -345,41 +341,39 @@
 						</form>
 					{/each}
 					<form class="excl-form" method="POST" action="?/exclude" use:enhance={submit}>
-						<label class="sr-only" for="exa">Prima persona</label>
+						<label class="sr-only" for="exa">{a.firstPerson}</label>
 						<select id="exa" name="a" class="input" required>
-							<option value="">Persona…</option>
+							<option value="">{a.person}</option>
 							{#each data.participants as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
 						</select>
-						<label class="sr-only" for="exb">Seconda persona</label>
+						<label class="sr-only" for="exb">{a.secondPerson}</label>
 						<select id="exb" name="b" class="input" required>
-							<option value="">Persona…</option>
+							<option value="">{a.person}</option>
 							{#each data.participants as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
 						</select>
-						<button class="btn btn-pine" type="submit" disabled={busy}>Aggiungi</button>
+						<button class="btn btn-pine" type="submit" disabled={busy}>{t.common.add}</button>
 					</form>
 				</section>
 			{/if}
 
 			<section class="cta snow">
 				{#if drawn}
-					<span class="cta-title">Fatto!</span>
+					<span class="cta-title">{a.done}</span>
 					<p>
-						Ognuno ha ricevuto il suo link segreto. Se qualcuno non trova la mail, usa “Rimanda”.
+						{a.doneText}
 					</p>
 					{#if form && 'sent' in form && typeof form.sent === 'number'}
 						<p class="note">
-							Inviate {form.sent} email{#if form.failed?.length}; non riuscite: {form.failed.join(
-									', '
-								)}{/if}.
+							{a.sentReport(form.sent, form.failed ?? [])}
 						</p>
 					{/if}
-					<small>Nessuno, nemmeno tu, può vedere gli abbinamenti.</small>
+					<small>{a.nobodyCanSee}</small>
 				{:else}
 					<ol class="steps">
 						<li class:done={anyInvited && ready === total}>
-							<span class="step-title">1. Liste dei desideri</span>
+							<span class="step-title">{a.step1}</span>
 							{#if !anyInvited}
-								<p>Ognuno riceve una mail per scrivere la sua lista.</p>
+								<p>{a.step1Hint}</p>
 							{:else}
 								<div
 									class="meter"
@@ -387,31 +381,29 @@
 									aria-valuemin="0"
 									aria-valuemax={total}
 									aria-valuenow={ready}
-									aria-label="Liste pronte"
+									aria-label={a.readyMeterLabel}
 								>
 									<span style:width="{total ? (ready / total) * 100 : 0}%"></span>
 								</div>
 								<p>
-									<strong>{ready} di {total}</strong> liste pronte.
-									{ready === total
-										? 'Tutti hanno finito!'
-										: 'Ti mandiamo una mail quando tutti hanno finito.'}
+									<strong>{a.readyOf(ready, total)}</strong>{a.readySuffix}
+									{ready === total ? a.allDone : a.willNotify}
 								</p>
 							{/if}
 							{#if notInvited > 0}
 								<form method="POST" action="?/inviteWishlist" use:enhance={submit}>
 									<button class="btn btn-cream" type="submit" disabled={busy || total === 0}>
 										{busy
-											? 'Un attimo…'
+											? t.common.wait
 											: anyInvited
-												? `Invita ${notInvited === 1 ? 'la persona nuova' : `le ${notInvited} persone nuove`}`
-												: `Invia ${total} inviti per la lista`}
+												? a.inviteNew(notInvited)
+												: a.inviteAll(total)}
 									</button>
 								</form>
 							{/if}
 						</li>
 						<li>
-							<span class="step-title">2. Estrazione</span>
+							<span class="step-title">{a.step2}</span>
 							<form method="POST" action="?/draw" use:enhance={submit} onsubmit={confirmDraw}>
 								<button
 									class="btn"
@@ -420,20 +412,18 @@
 									type="submit"
 									disabled={busy || total < 3}
 								>
-									{busy ? 'Un attimo…' : `Estrai e invia le buste`}
+									{busy ? t.common.wait : a.drawButton}
 								</button>
 							</form>
-							{#if total < 3}<small>Servono almeno 3 persone.</small>{/if}
+							{#if total < 3}<small>{a.needThree}</small>{/if}
 						</li>
 					</ol>
 					{#if form && 'invited' in form && typeof form.sent === 'number'}
 						<p class="note">
-							Inviate {form.sent} email{#if form.failed?.length}; non riuscite: {form.failed.join(
-									', '
-								)}{/if}.
+							{a.sentReport(form.sent, form.failed ?? [])}
 						</p>
 					{/if}
-					<small>Nessuno, nemmeno tu, vedrà gli abbinamenti.</small>
+					<small>{t.common.nobodySees}</small>
 				{/if}
 			</section>
 		</aside>

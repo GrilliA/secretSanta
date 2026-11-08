@@ -1,0 +1,1 @@
+ALTER TABLE "event" ADD COLUMN "locale" text DEFAULT 'it' NOT NULL;

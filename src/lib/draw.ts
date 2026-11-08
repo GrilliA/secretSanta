@@ -16,8 +16,15 @@ export type Exclusion = readonly [string, string];
 export type Assignments = Map<string, string>;
 
 export class DrawImpossibleError extends Error {
-	constructor(message = 'Impossibile completare l’estrazione con queste esclusioni.') {
-		super(message);
+	constructor(
+		/** `tooFew`: meno di 3 persone; `impossible`: esclusioni troppo restrittive. */
+		readonly reason: 'tooFew' | 'impossible' = 'impossible'
+	) {
+		super(
+			reason === 'tooFew'
+				? 'Servono almeno 3 partecipanti.'
+				: 'Impossibile completare l’estrazione con queste esclusioni.'
+		);
 		this.name = 'DrawImpossibleError';
 	}
 }
@@ -47,7 +54,7 @@ export function draw(
 		throw new Error('Partecipanti duplicati.');
 	}
 	if (ids.length < 3) {
-		throw new DrawImpossibleError('Servono almeno 3 partecipanti.');
+		throw new DrawImpossibleError('tooFew');
 	}
 
 	const blocked = new Set(exclusions.map(([a, b]) => exclusionKey(a, b)));

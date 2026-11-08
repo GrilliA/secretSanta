@@ -3,7 +3,10 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		interface Locals {
+			/** Lingua dell'interfaccia (vedi hooks.server.ts). */
+			locale: import('#lib/i18n/index.ts').Locale;
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
