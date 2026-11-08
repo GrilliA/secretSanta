@@ -12,6 +12,9 @@
 
 	let phase = $state<'closed' | 'opening' | 'revealed'>('closed');
 	const day = $derived(formatDay(data.event.exchangeDate));
+	const ownTitle = $derived(
+		data.managerName ? `La lista di ${data.me.name}` : 'La tua lista dei desideri'
+	);
 </script>
 
 <svelte:head><title>Il tuo Secret Santa · {data.event.name}</title></svelte:head>
@@ -95,7 +98,7 @@
 	</section>
 
 	{#if phase === 'revealed' || !data.receiver}
-		<main class="container lists fadein late">
+		<main class="container lists fadein late" class:stacked={data.receiver}>
 			{#if data.receiver}
 				<section class="card">
 					<h2>I desideri di {data.receiver.name}</h2>
@@ -117,13 +120,13 @@
 							{/each}
 						</ul>
 					{:else}
-						<p class="muted">Non ha ancora scritto la sua lista. Ripassa più tardi!</p>
+						<p class="muted">Non ha scritto desideri: vai di fantasia!</p>
 					{/if}
+					<p class="secret">Shh… è un segreto: non dirlo a {data.receiver.name}!</p>
 				</section>
 			{/if}
 
-			<section class="card">
-				<h2>{data.managerName ? `La lista di ${data.me.name}` : 'La tua lista dei desideri'}</h2>
+			{#snippet ownList()}
 				<p class="muted">
 					{data.managerName
 						? `La vede solo chi fa il regalo a ${data.me.name}. La compili tu per conto suo.`
@@ -194,10 +197,29 @@
 							{/if}
 						{/if}
 					</form>
-				{:else}
-					<p class="secret">Shh… è un segreto: non dirlo a {data.receiver.name}!</p>
 				{/if}
-			</section>
+			{/snippet}
+
+			{#if data.receiver}
+				<details class="card mine">
+					<summary>
+						<span>
+							<strong>{ownTitle}</strong>
+							<small
+								>{data.me.wishes.length}
+								{data.me.wishes.length === 1 ? 'desiderio' : 'desideri'}</small
+							>
+						</span>
+						<span class="edit">Modifica</span>
+					</summary>
+					{@render ownList()}
+				</details>
+			{:else}
+				<section class="card">
+					<h2>{ownTitle}</h2>
+					{@render ownList()}
+				</section>
+			{/if}
 		</main>
 	{/if}
 </div>
@@ -470,6 +492,55 @@
 		font-size: 17px;
 		line-height: 1.55;
 		color: #f6dcd8;
+	}
+	.lists.stacked {
+		flex-direction: column;
+		align-items: stretch;
+		max-width: 760px;
+	}
+	.lists.stacked .card {
+		flex: none;
+	}
+	.lists .card.mine {
+		padding: 0;
+		gap: 12px;
+	}
+	.mine summary {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		min-height: 64px;
+		padding: 0 28px;
+		cursor: pointer;
+		list-style: none;
+	}
+	.mine summary::-webkit-details-marker {
+		display: none;
+	}
+	.mine summary span:first-child {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	.mine summary small {
+		font-size: 13px;
+		color: var(--ink-muted);
+	}
+	.mine .edit {
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--pine);
+		text-decoration: underline;
+	}
+	.mine[open] .edit {
+		visibility: hidden;
+	}
+	.lists .card.mine[open] {
+		padding-bottom: 28px;
+	}
+	.mine[open] > :global(:not(summary)) {
+		margin-inline: 28px;
 	}
 	.quote {
 		font-style: italic;
