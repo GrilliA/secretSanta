@@ -16,12 +16,16 @@ cp .env.example .env
 npm run dev
 ```
 
-Pagine demo:
+In locale non serve nessun account: senza `DATABASE_URL` viene usato un Postgres interno (PGlite) e,
+senza `RESEND_API_KEY`, le email (con i link) vengono stampate nel terminale.
+L'anteprima grafica delle email è su `/anteprima/email`.
 
-- `/` — crea l'evento
-- `/evento/demo` — partecipanti, esclusioni ed estrazione
-- `/r/demo-nonna` — la busta da aprire con l'abbinamento
-- `/anteprima/email` — anteprima delle email d'invito
+## Messa online (Vercel + Neon + Resend)
+
+1. Crea un progetto su [Neon](https://neon.tech) e copia la connection string.
+2. Applica le migrazioni: `DATABASE_URL="..." npm run db:migrate`.
+3. Su [Resend](https://resend.com) verifica il dominio da cui spedire e crea una API key.
+4. Importa la repo su Vercel e imposta `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM` (e se vuoi `APP_URL`).
 
 ## Script
 
@@ -36,4 +40,4 @@ Pagine demo:
 
 ## Stack
 
-SvelteKit 3 · Svelte 5 · TypeScript · Drizzle + Postgres · Resend · Vercel.
+SvelteKit 3 · Svelte 5 · TypeScript · Drizzle + Neon · Resend · Vercel.

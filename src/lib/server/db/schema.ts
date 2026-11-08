@@ -1,7 +1,8 @@
 import {
+	boolean,
 	date,
 	foreignKey,
-	integer,
+	index,
 	pgTable,
 	primaryKey,
 	text,
@@ -14,10 +15,12 @@ export const event = pgTable('event', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	name: text('name').notNull(),
 	exchangeDate: date('exchange_date'),
-	/** Budget in centesimi di euro. */
-	budgetCents: integer('budget_cents'),
+	/** Budget così come scritto dall'organizzatore (es. "30 €"). */
+	budget: text('budget'),
 	message: text('message'),
-	/** Token segreto con cui l'organizzatore gestisce l'evento. */
+	organizerName: text('organizer_name').notNull(),
+	organizerEmail: text('organizer_email').notNull(),
+	/** Token segreto con cui l'organizzatore gestisce l'evento (link /evento/[adminToken]). */
 	adminToken: text('admin_token').notNull().unique(),
 	drawnAt: timestamp('drawn_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
@@ -39,13 +42,18 @@ export const participant = pgTable(
 		managedById: uuid('managed_by_id'),
 		/** Token del link personale: mostra solo l'abbinamento di questa persona. */
 		token: text('token').notNull().unique(),
-		isOrganizer: integer('is_organizer').notNull().default(0),
+		isOrganizer: boolean('is_organizer').notNull().default(false),
 		inviteSentAt: timestamp('invite_sent_at', { withTimezone: true }),
-		inviteOpenedAt: timestamp('invite_opened_at', { withTimezone: true })
+		inviteOpenedAt: timestamp('invite_opened_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
-	(t) => [foreignKey({ columns: [t.managedById], foreignColumns: [t.id] }).onDelete('set null')]
+	(t) => [
+		foreignKey({ columns: [t.managedById], foreignColumns: [t.id] }).onDelete('set null'),
+		index('participant_event_idx').on(t.eventId)
+	]
 );
 
+/** Coppia che non deve pescarsi. Salvata con `aId < bId` per evitare duplicati. */
 export const exclusion = pgTable(
 	'exclusion',
 	{
@@ -59,7 +67,7 @@ export const exclusion = pgTable(
 			.notNull()
 			.references(() => participant.id, { onDelete: 'cascade' })
 	},
-	(t) => [primaryKey({ columns: [t.aId, t.bId] })]
+	(t) => [primaryKey({ columns: [t.aId, t.bId] }), index('exclusion_event_idx').on(t.eventId)]
 );
 
 export const assignment = pgTable(
@@ -81,11 +89,15 @@ export const assignment = pgTable(
 	]
 );
 
-export const wish = pgTable('wish', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	participantId: uuid('participant_id')
-		.notNull()
-		.references(() => participant.id, { onDelete: 'cascade' }),
-	text: text('text').notNull(),
-	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
-});
+export const wish = pgTable(
+	'wish',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		participantId: uuid('participant_id')
+			.notNull()
+			.references(() => participant.id, { onDelete: 'cascade' }),
+		text: text('text').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [index('wish_participant_idx').on(t.participantId)]
+);

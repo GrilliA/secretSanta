@@ -6,7 +6,8 @@ aggiunge i partecipanti, l'app estrae gli abbinamenti e invia a ognuno un link s
 ## Stack
 
 - **SvelteKit 3** + **Svelte 5 (runes)** + TypeScript strict. Nessun framework CSS: design tokens in `src/app.css`.
-- **Drizzle ORM** su Postgres (`src/lib/server/db/schema.ts`), email via **Resend** (`src/lib/server/email/`).
+- **Drizzle ORM** su **Neon** (driver `neon-http`, `src/lib/server/db/`), email via **Resend** (`src/lib/server/email/`).
+- In sviluppo senza `DATABASE_URL` si usa **PGlite** su disco (`.pglite/`); nei test PGlite in memoria (`#lib/server/test-db.ts`).
 - Deploy su **Vercel** (`@sveltejs/adapter-vercel`). Test con **Vitest**.
 - Richiede Node ≥ 22 e **npm ≥ 11** (npm 10 fallisce l'install con `edgesOut` error).
 
@@ -18,7 +19,8 @@ npm run check      # svelte-check (tipi)
 npm run lint       # prettier + eslint
 npm test           # vitest
 npm run build      # build Vercel
-npm run db:push    # applica lo schema al DB (richiede DATABASE_URL)
+npm run db:generate # genera una migrazione in drizzle/ dopo aver cambiato lo schema
+npm run db:migrate  # applica le migrazioni al DB Neon (richiede DATABASE_URL)
 ```
 
 Prima di ogni commit: `npm run format && npm run check && npm run lint && npm test`.
@@ -47,7 +49,17 @@ Fonte: canvas "Secret Santa – Design". Palette in `app.css` (pine, holly, gold
 Decorazioni in `src/lib/components/` (Baubles, Hills, Snowflake, Envelope). Neve: classe `.snow`.
 Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispettato, controlli nativi con label.
 
-## Stato attuale
+## Architettura
 
-L'interfaccia gira su dati demo (`#lib/demo.ts`). Pagine: `/`, `/evento/demo`, `/r/demo-nonna`, `/anteprima/email`.
-I `TODO` nel codice segnano dove collegare DB e invio email reali.
+- `src/lib/server/events.ts`: tutta la logica di dominio sul DB. Ogni funzione riceve `db: Db` → testabile con PGlite
+  (`events.spec.ts`). Gli errori per l'utente sono `EventError`; nelle actions si usa `guard()` (`#lib/server/actions.ts`).
+- Niente login: l'organizzatore gestisce l'evento da `/evento/[adminToken]`, ogni partecipante vede il suo invito da `/r/[token]`.
+- Le pagine usano form actions + `use:enhance`. `getDb()` è async.
+- Lo schema si cambia solo con `db:generate` (migrazioni versionate in `drizzle/`), mai `db:push` in produzione.
+- `/anteprima/email` esiste solo in sviluppo.
+
+## Pagine
+
+- `/` crea l'evento (manda all'organizzatore il link di gestione)
+- `/evento/[adminToken]` partecipanti, esclusioni, estrazione + invio, stato inviti, "Rimanda"
+- `/r/[token]` busta animata, destinatario, desideri
