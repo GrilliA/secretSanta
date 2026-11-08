@@ -1,0 +1,198 @@
+/* Design tokens — vedi "Secret Santa – Design" (canvas). */
+:root {
+	--pine: #0f3d2e;
+	--pine-700: #1f5240;
+	--pine-600: #2e5d4c;
+	--holly: #b4232a;
+	--holly-700: #8e1a20;
+	--holly-800: #6e1218;
+	--gold: #d4a73a;
+	--gold-700: #b98d2a;
+	--gold-300: #f3d27a;
+	--cream: #fbf4e8;
+	--cream-200: #f3e8d4;
+	--cream-300: #eadfcb;
+	--sand: #d9cdb8;
+	--blush: #fcf1ef;
+	--ink: #1e1a16;
+	--ink-muted: #6b5f50;
+	--mist: #d9e6df;
+
+	--font-display: 'Fraunces', Georgia, serif;
+	--font-body: 'Inter', system-ui, sans-serif;
+
+	--radius-sm: 12px;
+	--radius-md: 14px;
+	--radius-lg: 20px;
+	--radius-xl: 24px;
+	--container: 1200px;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	background: var(--cream);
+}
+
+body {
+	margin: 0;
+	font-family: var(--font-body);
+	color: var(--ink);
+	background: var(--cream);
+	-webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+	font-family: var(--font-display);
+	font-weight: 800;
+	margin: 0;
+}
+
+a {
+	color: var(--pine);
+}
+
+.container {
+	max-width: var(--container);
+	width: 100%;
+	margin: 0 auto;
+	padding-inline: 32px;
+}
+
+@media (max-width: 640px) {
+	.container {
+		padding-inline: 18px;
+	}
+}
+
+/* Neve che cade, usata sulle superfici scure. */
+.snow {
+	background-image:
+		radial-gradient(rgba(255, 255, 255, 0.35) 1.6px, transparent 1.8px),
+		radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1.2px);
+	background-size:
+		56px 56px,
+		29px 29px;
+	background-position:
+		0 0,
+		14px 19px;
+	animation: snowfall 14s linear infinite;
+}
+
+@keyframes snowfall {
+	to {
+		background-position:
+			0 560px,
+			14px 599px;
+	}
+}
+
+/* Controlli di form */
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.field label {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.input {
+	height: 48px;
+	border: 1.5px solid var(--sand);
+	border-radius: var(--radius-sm);
+	padding: 0 14px;
+	background: #fff;
+	font: inherit;
+	font-size: 16px;
+	color: var(--ink);
+}
+
+textarea.input {
+	height: auto;
+	padding: 12px 14px;
+	resize: vertical;
+}
+
+.input:focus-visible,
+.btn:focus-visible,
+a:focus-visible,
+button:focus-visible {
+	outline: 3px solid var(--gold);
+	outline-offset: 2px;
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 54px;
+	padding: 0 28px;
+	border: 0;
+	border-radius: var(--radius-md);
+	font: inherit;
+	font-weight: 600;
+	font-size: 16px;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.btn-primary {
+	background: var(--holly);
+	color: #fff;
+}
+
+.btn-primary:hover {
+	background: var(--holly-700);
+}
+
+.btn-pine {
+	background: var(--pine);
+	color: var(--cream);
+	height: 46px;
+	padding: 0 20px;
+	font-size: 15px;
+}
+
+.btn-cream {
+	background: var(--cream);
+	color: var(--holly-700);
+}
+
+.card {
+	background: #fff;
+	border: 1px solid var(--cream-300);
+	border-radius: var(--radius-lg);
+	padding: 24px;
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+	.snow {
+		animation: none;
+	}
+}
