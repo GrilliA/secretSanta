@@ -1,31 +1,22 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { enhance } from '$app/forms';
 	import Baubles from '#lib/components/Baubles.svelte';
 	import Envelope from '#lib/components/Envelope.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import Hills from '#lib/components/Hills.svelte';
+	import { formatDay } from '#lib/format.ts';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	let phase = $state<'closed' | 'opening' | 'revealed'>('closed');
-	let myWishes = $state<string[]>(untrack(() => [...data.me.wishes]));
-	let newWish = $state('');
-
-	function addWish(e: SubmitEvent) {
-		e.preventDefault();
-		const w = newWish.trim();
-		if (!w) return;
-		// TODO: salvare il desiderio sul server.
-		myWishes.push(w);
-		newWish = '';
-	}
+	const day = $derived(formatDay(data.event.exchangeDate));
 </script>
 
 <svelte:head><title>Il tuo Secret Santa · {data.event.name}</title></svelte:head>
 
 <div class="page">
-	<section class="hero snow" class:tall={phase !== 'revealed'}>
+	<section class="hero snow" class:tall={data.receiver && phase !== 'revealed'}>
 		<Baubles tone="pine" />
 		<div class="container inner">
 			<div class="top">
@@ -35,7 +26,16 @@
 				{/if}
 			</div>
 
-			{#if phase !== 'revealed'}
+			{#if !data.receiver}
+				<div class="closed">
+					<span class="lead">Ciao {data.me.name}!</span>
+					<h1 class="wait">L’estrazione non è ancora stata fatta.</h1>
+					<p class="wait-text">
+						Riceverai una mail quando {data.event.organizerName} avrà estratto i nomi. Intanto puoi scrivere
+						la tua lista dei desideri qui sotto.
+					</p>
+				</div>
+			{:else if phase !== 'revealed'}
 				<div class="closed">
 					<span class="lead">{data.me.name}, c’è una busta per te</span>
 					<Envelope opening={phase === 'opening'} onopened={() => (phase = 'revealed')} />
@@ -52,7 +52,7 @@
 					<h1 class="fadein late">{data.receiver.name}</h1>
 					<div class="facts fadein late">
 						{#if data.event.budget}<span>Budget {data.event.budget}</span>{/if}
-						{#if data.event.exchangeDate}<span>Scambio il {data.event.exchangeDate}</span>{/if}
+						{#if day}<span>Scambio il {day}</span>{/if}
 						<button type="button" class="replay" onclick={() => (phase = 'closed')}>
 							Riapri la busta
 						</button>
@@ -72,31 +72,33 @@
 		<Hills height={80} />
 	</section>
 
-	{#if phase === 'revealed'}
+	{#if phase === 'revealed' || !data.receiver}
 		<main class="container lists fadein late">
-			<section class="card">
-				<h2>I desideri di {data.receiver.name}</h2>
-				{#if data.receiver.wishes.length}
-					<ul class="wishes">
-						{#each data.receiver.wishes as w (w)}
-							<li>
-								<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"
-									><path
-										d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"
-										fill="var(--gold)"
-										stroke="var(--gold-700)"
-										stroke-width="1.5"
-										stroke-linejoin="round"
-									/></svg
-								>
-								{w}
-							</li>
-						{/each}
-					</ul>
-				{:else}
-					<p class="muted">Non ha ancora scritto la sua lista. Ripassa più tardi!</p>
-				{/if}
-			</section>
+			{#if data.receiver}
+				<section class="card">
+					<h2>I desideri di {data.receiver.name}</h2>
+					{#if data.receiver.wishes.length}
+						<ul class="wishes">
+							{#each data.receiver.wishes as w (w)}
+								<li>
+									<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"
+										><path
+											d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"
+											fill="var(--gold)"
+											stroke="var(--gold-700)"
+											stroke-width="1.5"
+											stroke-linejoin="round"
+										/></svg
+									>
+									{w}
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="muted">Non ha ancora scritto la sua lista. Ripassa più tardi!</p>
+					{/if}
+				</section>
+			{/if}
 
 			<section class="card">
 				<h2>{data.managerName ? `La lista di ${data.me.name}` : 'La tua lista dei desideri'}</h2>
@@ -105,22 +107,46 @@
 						? `La vede solo chi fa il regalo a ${data.me.name}. La compili tu per conto suo.`
 						: 'La vede solo chi ti fa il regalo.'}
 				</p>
-				{#if myWishes.length}
+				{#if data.me.wishes.length}
 					<ul class="wishes">
-						{#each myWishes as w, i (i)}<li>{w}</li>{/each}
+						{#each data.me.wishes as w (w.id)}
+							<li>
+								<span class="wish-text">{w.text}</span>
+								<form method="POST" action="?/removeWish" use:enhance>
+									<input type="hidden" name="id" value={w.id} />
+									<button type="submit" class="icon-btn" aria-label="Rimuovi {w.text}">
+										<svg
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg
+										>
+									</button>
+								</form>
+							</li>
+						{/each}
 					</ul>
 				{/if}
-				<form class="wish-form" onsubmit={addWish}>
+				<form class="wish-form" method="POST" action="?/addWish" use:enhance>
 					<label class="sr-only" for="wish">Aggiungi un desiderio</label>
 					<input
 						id="wish"
+						name="text"
 						class="input"
 						placeholder="Aggiungi un desiderio…"
-						bind:value={newWish}
+						maxlength="140"
+						required
 					/>
 					<button class="btn btn-pine" type="submit">Aggiungi</button>
 				</form>
-				<p class="secret">Shh… è un segreto: non dirlo a {data.receiver.name}!</p>
+				{#if form?.error}<p class="err" role="alert">{form.error}</p>{/if}
+				{#if data.receiver}
+					<p class="secret">Shh… è un segreto: non dirlo a {data.receiver.name}!</p>
+				{/if}
 			</section>
 		</main>
 	{/if}
@@ -312,6 +338,42 @@
 		background: var(--cream-200);
 		border-radius: var(--radius-sm);
 		font-size: 15px;
+	}
+	.wish-text {
+		flex: 1;
+	}
+	.icon-btn {
+		width: 44px;
+		height: 44px;
+		margin: -12px -10px -12px 0;
+		border: 0;
+		background: transparent;
+		color: var(--ink-muted);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+	}
+	.err {
+		margin: 0;
+		padding: 12px 14px;
+		border-radius: var(--radius-sm);
+		background: var(--blush);
+		color: var(--holly-700);
+		font-size: 14px;
+	}
+	.wait {
+		font-size: clamp(32px, 5vw, 56px);
+		line-height: 1.05;
+		max-width: 18ch;
+	}
+	.wait-text {
+		margin: 0;
+		max-width: 34rem;
+		font-size: 17px;
+		line-height: 1.55;
+		color: #f6dcd8;
 	}
 	.wish-form {
 		display: flex;

@@ -4,7 +4,8 @@ const optional = (value: string | undefined) => value || undefined;
 
 export const variables = defineEnvVars({
 	DATABASE_URL: {
-		description: 'Stringa di connessione Postgres (es. Supabase o Neon).',
+		description:
+			'Stringa di connessione Neon (Postgres). In sviluppo, se vuota, si usa PGlite locale in .pglite/.',
 		schema: optional
 	},
 	RESEND_API_KEY: {
@@ -15,9 +16,9 @@ export const variables = defineEnvVars({
 		description: 'Mittente delle email, es. "Secret Santa <santa@tuodominio.it>".',
 		schema: (value) => value || 'Secret Santa <onboarding@resend.dev>'
 	},
-	PUBLIC_APP_URL: {
-		public: true,
-		description: 'URL pubblico dell’app, usato per i link nelle email.',
-		schema: (value) => value || 'http://localhost:5173'
+	APP_URL: {
+		description:
+			'URL pubblico dell’app per i link nelle email. Se vuoto si usa l’origine della richiesta.',
+		schema: optional
 	}
 });

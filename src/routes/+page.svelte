@@ -1,22 +1,13 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
 	import Baubles from '#lib/components/Baubles.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import Hills from '#lib/components/Hills.svelte';
 	import Snowflake from '#lib/components/Snowflake.svelte';
+	import type { PageProps } from './$types';
 
-	let name = $state('Natale in famiglia 2026');
-	let date = $state('2026-12-25');
-	let budget = $state('');
-	let message = $state('');
-	let organizerPlays = $state(true);
-
-	function submit(e: SubmitEvent) {
-		e.preventDefault();
-		// TODO: creare l'evento sul server (form remota / action) e usare il suo id.
-		goto(resolve('/evento/[id]', { id: 'demo' }));
-	}
+	let { form }: PageProps = $props();
+	let submitting = $state(false);
 </script>
 
 <div class="page snow">
@@ -41,7 +32,17 @@
 			</ol>
 		</section>
 
-		<form class="form" onsubmit={submit}>
+		<form
+			class="form"
+			method="POST"
+			use:enhance={() => {
+				submitting = true;
+				return async ({ update }) => {
+					await update({ reset: false });
+					submitting = false;
+				};
+			}}
+		>
 			<svg class="bow" width="64" height="40" viewBox="0 0 64 40" aria-hidden="true">
 				<path
 					d="M32 20C22 4 6 2 6 14s16 8 26 6zM32 20c10-16 26-18 26-6s-16 8-26 6z"
@@ -61,30 +62,50 @@
 			</div>
 			<div class="field">
 				<label for="name">Nome dell’evento</label>
-				<input id="name" class="input" bind:value={name} required />
+				<input id="name" name="name" class="input" value="Natale in famiglia" required />
 			</div>
 			<div class="row">
 				<div class="field">
 					<label for="date">Data scambio</label>
-					<input id="date" class="input" type="date" bind:value={date} />
+					<input id="date" name="exchangeDate" class="input" type="date" value="2026-12-25" />
 				</div>
 				<div class="field">
 					<label for="budget">Budget</label>
-					<input id="budget" class="input" placeholder="es. 30 €" bind:value={budget} />
+					<input id="budget" name="budget" class="input" placeholder="es. 30 €" />
 				</div>
 			</div>
 			<div class="field">
 				<label for="msg">Messaggio per tutti <span class="muted">(facoltativo)</span></label>
-				<textarea id="msg" class="input" rows="2" bind:value={message}></textarea>
+				<textarea id="msg" name="message" class="input" rows="2"></textarea>
+			</div>
+			<div class="row">
+				<div class="field">
+					<label for="oname">Il tuo nome</label>
+					<input id="oname" name="organizerName" class="input" autocomplete="given-name" required />
+				</div>
+				<div class="field">
+					<label for="oemail">La tua email</label>
+					<input
+						id="oemail"
+						name="organizerEmail"
+						class="input"
+						type="email"
+						autocomplete="email"
+						required
+					/>
+				</div>
 			</div>
 			<label class="toggle">
 				<span>
 					<strong>Partecipo anch’io</strong>
 					<small>Non vedrai gli abbinamenti degli altri</small>
 				</span>
-				<input type="checkbox" bind:checked={organizerPlays} />
+				<input type="checkbox" name="organizerPlays" checked />
 			</label>
-			<button class="btn btn-primary" type="submit">Avanti: aggiungi partecipanti</button>
+			{#if form?.error}<p class="err" role="alert">{form.error}</p>{/if}
+			<button class="btn btn-primary" type="submit" disabled={submitting}>
+				{submitting ? 'Creo l’evento…' : 'Avanti: aggiungi partecipanti'}
+			</button>
 		</form>
 	</main>
 	<Hills />
@@ -254,6 +275,18 @@
 	.toggle small {
 		font-size: 13px;
 		color: var(--ink-muted);
+	}
+	.err {
+		margin: 0;
+		padding: 12px 14px;
+		border-radius: var(--radius-sm);
+		background: var(--blush);
+		color: var(--holly-700);
+		font-size: 14px;
+	}
+	.btn:disabled {
+		opacity: 0.7;
+		cursor: default;
 	}
 	.toggle input {
 		width: 22px;
