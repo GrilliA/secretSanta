@@ -26,4 +26,14 @@ describe('buildInvites', () => {
 			buildInvites([{ id: 'x', name: 'X', email: 'x@x.it', managedById: 'nope', token: 't' }])
 		).toThrow();
 	});
+
+	it('nella fase lista usa oggetti dedicati', () => {
+		const invites = buildInvites(participants, 'wishlist');
+		expect(invites.find((i) => i.participantId === 'r')?.subject).toBe(
+			'Scrivi la lista dei desideri di Nonna Rosa'
+		);
+		expect(invites.find((i) => i.participantId === 'g')?.subject).toBe(
+			'Scrivi la tua lista dei desideri'
+		);
+	});
 });

@@ -1,8 +1,9 @@
 import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { draw, type Rng } from '#lib/draw.ts';
-import { normalizeEmail, type InviteParticipant } from '#lib/invites.ts';
+import { normalizeEmail, type InviteKind, type InviteParticipant } from '#lib/invites.ts';
 import type { Db } from './db/index.ts';
-import { assignment, event, exclusion, participant, wish } from './db/schema.ts';
+import { assignment, event, exclusion, participant, photo, wish } from './db/schema.ts';
+import type { PhotoInput } from './photos.ts';
 import { createToken } from './token.ts';
 
 /** Errore di dominio con messaggio mostrabile all'utente. */
@@ -93,10 +94,14 @@ export async function getAdminView(db: Db, adminToken: string) {
 			email: participant.email,
 			managedById: participant.managedById,
 			isOrganizer: participant.isOrganizer,
+			wishlistInvitedAt: participant.wishlistInvitedAt,
+			wishlistReadyAt: participant.wishlistReadyAt,
 			inviteSentAt: participant.inviteSentAt,
-			inviteOpenedAt: participant.inviteOpenedAt
+			inviteOpenedAt: participant.inviteOpenedAt,
+			photoId: photo.id
 		})
 		.from(participant)
+		.leftJoin(photo, eq(photo.participantId, participant.id))
 		.where(eq(participant.eventId, ev.id))
 		.orderBy(asc(participant.createdAt));
 
@@ -123,6 +128,7 @@ export interface AddParticipantInput {
 	name: string;
 	email?: string | null;
 	managedById?: string | null;
+	photo?: PhotoInput | null;
 }
 
 export async function addParticipant(db: Db, adminToken: string, input: AddParticipantInput) {
@@ -150,7 +156,53 @@ export async function addParticipant(db: Db, adminToken: string, input: AddParti
 		.insert(participant)
 		.values({ eventId: ev.id, name, email, managedById, token: createToken() })
 		.returning({ id: participant.id });
+	if (input.photo) await savePhoto(db, created.id, input.photo);
+	// Una persona nuova non ha ancora la lista: l'avviso "tutte pronte" potrà ripartire.
+	await db.update(event).set({ readyNotifiedAt: null }).where(eq(event.id, ev.id));
 	return created;
+}
+
+// ------------------------------------------------------------------ foto
+
+async function savePhoto(db: Db, participantId: string, input: PhotoInput) {
+	// Sostituzione = nuova riga con nuovo id, così l'URL vecchio (in cache) non mostra la foto nuova.
+	await db.delete(photo).where(eq(photo.participantId, participantId));
+	await db.insert(photo).values({ participantId, mime: input.mime, data: input.data });
+}
+
+async function requireParticipantOfEvent(db: Db, adminToken: string, participantId: string) {
+	const [row] = await db
+		.select({ id: participant.id })
+		.from(participant)
+		.innerJoin(event, eq(event.id, participant.eventId))
+		.where(and(eq(event.adminToken, adminToken), eq(participant.id, participantId)));
+	if (!row) throw new EventError('Partecipante non trovato.', 404);
+	return row;
+}
+
+/** Le foto si possono cambiare anche dopo l'estrazione: non influiscono sugli abbinamenti. */
+export async function setPhoto(
+	db: Db,
+	adminToken: string,
+	participantId: string,
+	input: PhotoInput
+) {
+	await requireParticipantOfEvent(db, adminToken, participantId);
+	await savePhoto(db, participantId, input);
+}
+
+export async function removePhoto(db: Db, adminToken: string, participantId: string) {
+	await requireParticipantOfEvent(db, adminToken, participantId);
+	await db.delete(photo).where(eq(photo.participantId, participantId));
+}
+
+export async function getPhoto(db: Db, photoId: string) {
+	if (!/^[0-9a-f-]{36}$/i.test(photoId)) return null;
+	const [row] = await db
+		.select({ mime: photo.mime, data: photo.data })
+		.from(photo)
+		.where(eq(photo.id, photoId));
+	return row ?? null;
 }
 
 export async function removeParticipant(db: Db, adminToken: string, participantId: string) {
@@ -232,14 +284,31 @@ export async function runDraw(db: Db, adminToken: string, rng?: Rng) {
 	return { event: ev, participants: inviteParticipants };
 }
 
-/** Dati per (ri)spedire gli inviti di un evento già estratto. */
-export async function getInviteParticipants(db: Db, adminToken: string, onlyIds?: string[]) {
+/**
+ * Dati per spedire inviti: fase "lista" prima dell'estrazione, fase "busta" dopo.
+ * Con `onlyIds` si limita a quei partecipanti; con `onlyNotInvited` (fase lista) a chi non l'ha ancora ricevuto.
+ */
+export async function getInviteParticipants(
+	db: Db,
+	adminToken: string,
+	options: { onlyIds?: string[]; onlyNotInvited?: boolean } = {}
+) {
 	const [ev] = await db.select().from(event).where(eq(event.adminToken, adminToken));
 	if (!ev) throw new EventError('Evento non trovato.', 404);
-	if (!ev.drawnAt) throw new EventError('L’estrazione non è ancora stata fatta.');
 	const people = await db.select().from(participant).where(eq(participant.eventId, ev.id));
+	const kind: InviteKind = ev.drawnAt ? 'draw' : 'wishlist';
+
+	const sendTo = people
+		.filter((p) => !options.onlyIds || options.onlyIds.includes(p.id))
+		.filter((p) => !(options.onlyNotInvited && kind === 'wishlist' && p.wishlistInvitedAt))
+		.map((p) => p.id);
+	if (kind === 'wishlist' && people.length === 0) {
+		throw new EventError('Aggiungi prima qualche partecipante.');
+	}
+
 	return {
 		event: ev,
+		kind,
 		participants: people.map((p) => ({
 			id: p.id,
 			name: p.name,
@@ -247,8 +316,16 @@ export async function getInviteParticipants(db: Db, adminToken: string, onlyIds?
 			managedById: p.managedById,
 			token: p.token
 		})),
-		sendTo: onlyIds ? people.filter((p) => onlyIds.includes(p.id)).map((p) => p.id) : null
+		sendTo
 	};
+}
+
+export async function markWishlistInvited(db: Db, participantIds: string[]) {
+	if (participantIds.length === 0) return;
+	await db
+		.update(participant)
+		.set({ wishlistInvitedAt: new Date() })
+		.where(inArray(participant.id, participantIds));
 }
 
 export async function markInvitesSent(db: Db, participantIds: string[]) {
@@ -271,9 +348,10 @@ export async function getInviteView(db: Db, token: string) {
 		: null;
 
 	const [assigned] = await db
-		.select({ id: participant.id, name: participant.name })
+		.select({ id: participant.id, name: participant.name, photoId: photo.id })
 		.from(assignment)
 		.innerJoin(participant, eq(participant.id, assignment.receiverId))
+		.leftJoin(photo, eq(photo.participantId, participant.id))
 		.where(eq(assignment.giverId, me.id));
 
 	const wishes = await db
@@ -297,11 +375,13 @@ export async function getInviteView(db: Db, token: string) {
 		me: {
 			id: me.id,
 			name: me.name,
+			ready: Boolean(me.wishlistReadyAt),
 			wishes: wishes.filter((w) => w.participantId === me.id).map(({ id, text }) => ({ id, text }))
 		},
 		receiver: assigned
 			? {
 					name: assigned.name,
+					photoId: assigned.photoId,
 					wishes: wishes.filter((w) => w.participantId === assigned.id).map((w) => w.text)
 				}
 			: null,
@@ -332,4 +412,35 @@ export async function removeWish(db: Db, token: string, wishId: string) {
 	const [me] = await db.select().from(participant).where(eq(participant.token, token));
 	if (!me) throw new EventError('Invito non trovato.', 404);
 	await db.delete(wish).where(and(eq(wish.id, wishId), eq(wish.participantId, me.id)));
+}
+
+// ------------------------------------------------------ lista pronta
+
+/**
+ * Il partecipante segna la sua lista come pronta (o la riapre).
+ * Se ora TUTTE le liste sono pronte e l'estrazione non è ancora fatta, restituisce i dati per avvisare
+ * l'organizzatore. L'avviso parte una volta sola (aggiornamento condizionale su `readyNotifiedAt`).
+ */
+export async function setWishlistReady(db: Db, token: string, ready: boolean) {
+	const [me] = await db.select().from(participant).where(eq(participant.token, token));
+	if (!me) throw new EventError('Invito non trovato.', 404);
+
+	await db
+		.update(participant)
+		.set({ wishlistReadyAt: ready ? new Date() : null })
+		.where(eq(participant.id, me.id));
+	if (!ready) return { notifyOrganizer: null, count: 0 };
+
+	const people = await db
+		.select({ ready: participant.wishlistReadyAt })
+		.from(participant)
+		.where(eq(participant.eventId, me.eventId));
+	if (people.some((p) => !p.ready)) return { notifyOrganizer: null, count: people.length };
+
+	const [ev] = await db
+		.update(event)
+		.set({ readyNotifiedAt: new Date() })
+		.where(and(eq(event.id, me.eventId), isNull(event.readyNotifiedAt), isNull(event.drawnAt)))
+		.returning();
+	return { notifyOrganizer: ev ?? null, count: people.length };
 }

@@ -2,7 +2,9 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import Avatar from '#lib/components/Avatar.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
+	import { preparePhoto, replaceInputFile } from '#lib/photo-client.ts';
 	import { formatDay } from '#lib/format.ts';
 	import type { PageProps } from './$types';
 
@@ -13,12 +15,50 @@
 	const nameOf = (id: string) => byId.get(id)?.name ?? '?';
 	const managers = $derived(data.participants.filter((p) => !p.managedById));
 	const opened = $derived(data.participants.filter((p) => p.inviteOpenedAt).length);
+	const total = $derived(data.participants.length);
+	const ready = $derived(data.participants.filter((p) => p.wishlistReadyAt).length);
+	const notInvited = $derived(data.participants.filter((p) => !p.wishlistInvitedAt).length);
+	const anyInvited = $derived(notInvited < total);
 
 	const countLabel = $derived(
-		`${data.participants.length} persone` + (drawn ? ` · ${opened} hanno aperto l’invito` : '')
+		(total === 1 ? '1 persona' : `${total} persone`) +
+			(drawn ? ` · ${opened} hanno aperto la busta` : anyInvited ? ` · ${ready} liste pronte` : '')
 	);
 
+	/** Stato della riga nella fase in corso. */
+	function statusOf(p: (typeof data.participants)[number]) {
+		if (drawn) {
+			if (p.inviteOpenedAt) return { label: 'Busta aperta', ok: true };
+			return { label: p.inviteSentAt ? 'Busta inviata' : 'Non inviata', ok: false };
+		}
+		if (p.wishlistReadyAt) return { label: 'Lista pronta', ok: true };
+		if (p.wishlistInvitedAt) return { label: 'Sta scrivendo la lista', ok: false };
+		return null;
+	}
+
 	let managedBy = $state('');
+	let newPhotoPreview = $state<string | null>(null);
+	let photoError = $state<string | null>(null);
+
+	/** Ritaglia e riduce la foto nel browser, poi la rimette nell'input del form. */
+	async function onPhotoChange(e: Event, autoSubmit = false) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		photoError = null;
+		if (!file) return;
+		try {
+			const prepared = await preparePhoto(file);
+			replaceInputFile(input, prepared);
+			if (autoSubmit) input.form?.requestSubmit();
+			else {
+				if (newPhotoPreview) URL.revokeObjectURL(newPhotoPreview);
+				newPhotoPreview = URL.createObjectURL(prepared);
+			}
+		} catch {
+			photoError = 'Non riesco a leggere questa immagine: prova con un’altra foto.';
+			input.value = '';
+		}
+	}
 	let busy = $state(false);
 	let copied = $state(false);
 
@@ -45,15 +85,24 @@
 			result: { type: string };
 		}) => {
 			await update({ reset: result.type === 'success' });
-			if (result.type === 'success') managedBy = '';
+			if (result.type === 'success') {
+				managedBy = '';
+				if (newPhotoPreview) URL.revokeObjectURL(newPhotoPreview);
+				newPhotoPreview = null;
+			}
 			busy = false;
 		};
 	};
 
 	const confirmDraw = (e: SubmitEvent) => {
+		const missing = total - ready;
+		const warning =
+			anyInvited && missing > 0
+				? `${missing === 1 ? '1 persona non ha' : `${missing} persone non hanno`} ancora finito la lista. `
+				: '';
 		if (
 			!confirm(
-				`Estrarre e inviare ${data.participants.length} inviti? Dopo non potrai più modificare i partecipanti.`
+				`${warning}Estrarre e inviare ${total} buste? Dopo non potrai più modificare i partecipanti.`
 			)
 		)
 			e.preventDefault();
@@ -130,9 +179,44 @@
 
 			{#each data.participants as p (p.id)}
 				<div class="person" class:managed={p.managedById}>
-					<div class="avatar" class:org={p.isOrganizer} class:red={p.managedById}>
-						{p.name[0]}
-					</div>
+					<form
+						class="photo-pick"
+						method="POST"
+						action="?/photo"
+						enctype="multipart/form-data"
+						use:enhance={submit}
+					>
+						<input type="hidden" name="id" value={p.id} />
+						<label title={p.photoId ? 'Cambia foto' : 'Aggiungi foto'}>
+							<Avatar
+								name={p.name}
+								photoId={p.photoId}
+								tone={p.isOrganizer ? 'pine' : p.managedById ? 'holly' : 'cream'}
+							/>
+							<span class="cam" aria-hidden="true">
+								<svg
+									width="12"
+									height="12"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.4"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg
+								>
+							</span>
+							<input
+								class="sr-only"
+								type="file"
+								name="photo"
+								accept="image/*"
+								aria-label="{p.photoId ? 'Cambia' : 'Aggiungi'} la foto di {p.name}"
+								disabled={busy}
+								onchange={(e) => onPhotoChange(e, true)}
+							/>
+						</label>
+					</form>
 					<div class="info">
 						<span class="pname">
 							{p.name}
@@ -142,18 +226,23 @@
 						{#if p.managedById}
 							<span class="badge">Gestito da {nameOf(p.managedById)} · mail separata</span>
 						{/if}
-						{#if drawn}
-							<span class="status" class:ok={p.inviteOpenedAt}>
-								{p.inviteOpenedAt ? 'Aperto' : p.inviteSentAt ? 'Inviato' : 'Non inviato'}
-							</span>
+						{#if statusOf(p)}
+							{@const st = statusOf(p)!}
+							<span class="status" class:ok={st.ok}>{st.label}</span>
 						{/if}
 					</div>
-					{#if drawn}
+					{#if drawn || p.wishlistInvitedAt}
 						<form method="POST" action="?/resend" use:enhance={submit}>
 							<input type="hidden" name="id" value={p.id} />
-							<button class="text-btn" type="submit" disabled={busy}>Rimanda</button>
+							<button
+								class="text-btn"
+								type="submit"
+								disabled={busy}
+								aria-label="Rimanda l’invito a {p.name}">Rimanda</button
+							>
 						</form>
-					{:else}
+					{/if}
+					{#if !drawn}
 						<form method="POST" action="?/remove" use:enhance={submit}>
 							<input type="hidden" name="id" value={p.id} />
 							<button type="submit" class="icon-btn" aria-label="Rimuovi {p.name}" disabled={busy}>
@@ -175,8 +264,26 @@
 				<p class="muted">Ancora nessuno. Aggiungi la prima persona qui sotto.</p>
 			{/each}
 
+			{#if photoError}<p class="err" role="alert">{photoError}</p>{/if}
 			{#if !drawn}
-				<form class="add" method="POST" action="?/add" use:enhance={submit}>
+				<form
+					class="add"
+					method="POST"
+					action="?/add"
+					enctype="multipart/form-data"
+					use:enhance={submit}
+				>
+					<label class="photo-field">
+						<Avatar name="+" src={newPhotoPreview} size={56} />
+						<span>{newPhotoPreview ? 'Cambia foto' : 'Foto'}<small>facoltativa</small></span>
+						<input
+							class="sr-only"
+							type="file"
+							name="photo"
+							accept="image/*"
+							onchange={(e) => onPhotoChange(e)}
+						/>
+					</label>
 					<div class="field">
 						<label for="pnome">Nome</label>
 						<input id="pnome" name="name" class="input" placeholder="es. Sara" required />
@@ -268,17 +375,64 @@
 					{/if}
 					<small>Nessuno, nemmeno tu, può vedere gli abbinamenti.</small>
 				{:else}
-					<span class="cta-title">Pronti a pescare?</span>
-					<form method="POST" action="?/draw" use:enhance={submit} onsubmit={confirmDraw}>
-						<button
-							class="btn btn-cream"
-							type="submit"
-							disabled={busy || data.participants.length < 3}
-						>
-							{busy ? 'Un attimo…' : `Estrai e invia ${data.participants.length} inviti`}
-						</button>
-					</form>
-					{#if data.participants.length < 3}<small>Servono almeno 3 persone.</small>{/if}
+					<ol class="steps">
+						<li class:done={anyInvited && ready === total}>
+							<span class="step-title">1. Liste dei desideri</span>
+							{#if !anyInvited}
+								<p>Ognuno riceve una mail per scrivere la sua lista.</p>
+							{:else}
+								<div
+									class="meter"
+									role="progressbar"
+									aria-valuemin="0"
+									aria-valuemax={total}
+									aria-valuenow={ready}
+									aria-label="Liste pronte"
+								>
+									<span style:width="{total ? (ready / total) * 100 : 0}%"></span>
+								</div>
+								<p>
+									<strong>{ready} di {total}</strong> liste pronte.
+									{ready === total
+										? 'Tutti hanno finito!'
+										: 'Ti mandiamo una mail quando tutti hanno finito.'}
+								</p>
+							{/if}
+							{#if notInvited > 0}
+								<form method="POST" action="?/inviteWishlist" use:enhance={submit}>
+									<button class="btn btn-cream" type="submit" disabled={busy || total === 0}>
+										{busy
+											? 'Un attimo…'
+											: anyInvited
+												? `Invita ${notInvited === 1 ? 'la persona nuova' : `le ${notInvited} persone nuove`}`
+												: `Invia ${total} inviti per la lista`}
+									</button>
+								</form>
+							{/if}
+						</li>
+						<li>
+							<span class="step-title">2. Estrazione</span>
+							<form method="POST" action="?/draw" use:enhance={submit} onsubmit={confirmDraw}>
+								<button
+									class="btn"
+									class:btn-cream={anyInvited && ready === total}
+									class:btn-ghost={!(anyInvited && ready === total)}
+									type="submit"
+									disabled={busy || total < 3}
+								>
+									{busy ? 'Un attimo…' : `Estrai e invia le buste`}
+								</button>
+							</form>
+							{#if total < 3}<small>Servono almeno 3 persone.</small>{/if}
+						</li>
+					</ol>
+					{#if form && 'invited' in form && typeof form.sent === 'number'}
+						<p class="note">
+							Inviate {form.sent} email{#if form.failed?.length}; non riuscite: {form.failed.join(
+									', '
+								)}{/if}.
+						</p>
+					{/if}
 					<small>Nessuno, nemmeno tu, vedrà gli abbinamenti.</small>
 				{/if}
 			</section>
@@ -455,25 +609,53 @@
 		border-color: #efc9c4;
 		background: var(--blush);
 	}
-	.avatar {
-		width: 40px;
-		height: 40px;
-		flex: none;
+	.photo-pick label {
+		position: relative;
+		display: block;
 		border-radius: 50%;
-		background: var(--cream-200);
+		cursor: pointer;
+	}
+	.photo-pick label:focus-within {
+		outline: 3px solid var(--gold);
+		outline-offset: 2px;
+	}
+	.cam {
+		position: absolute;
+		right: -4px;
+		bottom: -4px;
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: #fff;
+		border: 1px solid var(--cream-300);
 		color: var(--pine);
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+	.photo-field {
+		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-height: 56px;
+		padding-right: 8px;
+		cursor: pointer;
+		font-size: 14px;
 		font-weight: 600;
 	}
-	.avatar.org {
-		background: var(--pine);
-		color: var(--gold-300);
+	.photo-field span:last-of-type {
+		display: flex;
+		flex-direction: column;
 	}
-	.avatar.red {
-		background: var(--holly);
-		color: #fff;
+	.photo-field small {
+		font-weight: 400;
+		color: var(--ink-muted);
+	}
+	.photo-field:focus-within {
+		outline: 3px solid var(--gold);
+		outline-offset: 4px;
+		border-radius: var(--radius-sm);
 	}
 	.info {
 		flex: 1;
@@ -605,6 +787,50 @@
 	.cta .note {
 		font-size: 14px;
 		color: var(--gold-300);
+	}
+	.steps {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+	}
+	.steps li {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.steps li + li {
+		padding-top: 18px;
+		border-top: 1px dashed rgba(255, 255, 255, 0.3);
+	}
+	.step-title {
+		font-family: var(--font-display);
+		font-weight: 600;
+		font-size: 20px;
+		color: var(--gold-300);
+	}
+	.steps li.done .step-title::after {
+		content: ' ✓';
+	}
+	.meter {
+		height: 8px;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.2);
+		overflow: hidden;
+	}
+	.meter span {
+		display: block;
+		height: 100%;
+		background: var(--gold);
+		border-radius: 4px;
+		transition: width 0.4s ease;
+	}
+	.btn-ghost {
+		background: transparent;
+		color: #fff;
+		border: 1.5px solid rgba(255, 255, 255, 0.6);
 	}
 	.cta-title {
 		font-family: var(--font-display);

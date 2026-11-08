@@ -57,9 +57,22 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
 - Le pagine usano form actions + `use:enhance`. `getDb()` è async.
 - Lo schema si cambia solo con `db:generate` (migrazioni versionate in `drizzle/`), mai `db:push` in produzione.
 - `/anteprima/email` esiste solo in sviluppo.
+- **Foto**: le carica l'organizzatore (form di aggiunta o clic sull'avatar). Il browser le ritaglia/riduce
+  (`#lib/photo-client.ts`), il server valida i byte reali (`#lib/server/photos.ts`) e le salva in base64
+  nella tabella `photo`. Servite da `/foto/[photoId]` con cache immutable: l'id cambia a ogni sostituzione.
+
+## Flusso in due fasi
+
+1. **Lista dei desideri**: l'organizzatore invia gli inviti "Scrivi la tua lista" (`?/inviteWishlist`, solo a chi non
+   l'ha ricevuto). Ognuno scrive i desideri da `/r/[token]` e preme "La mia lista è pronta" (`?/ready`).
+   Quando l'ultima lista è pronta l'organizzatore riceve UNA mail (`setWishlistReady` + `event.readyNotifiedAt`;
+   aggiungere una persona azzera l'avviso).
+2. **Estrazione**: l'organizzatore estrae (anche se manca qualcuno, dopo conferma) e parte la mail con la busta.
+   `?/resend` rimanda l'invito della fase in corso. Le email condividono `#lib/server/email/layout.ts`.
 
 ## Pagine
 
 - `/` crea l'evento (manda all'organizzatore il link di gestione)
 - `/evento/[adminToken]` partecipanti, esclusioni, estrazione + invio, stato inviti, "Rimanda"
-- `/r/[token]` busta animata, destinatario, desideri
+- `/r/[token]` busta animata, viso + nome del destinatario, desideri
+- `/foto/[id]` immagine di un partecipante
