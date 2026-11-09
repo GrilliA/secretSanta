@@ -362,6 +362,19 @@ export async function getInviteView(db: Db, token: string) {
 		.leftJoin(photo, eq(photo.participantId, participant.id))
 		.where(eq(assignment.giverId, me.id));
 
+	// Chi gioca: solo nome, foto e "lista pronta". Niente email, token o abbinamenti.
+	const players = await db
+		.select({
+			id: participant.id,
+			name: participant.name,
+			photoId: photo.id,
+			ready: participant.wishlistReadyAt
+		})
+		.from(participant)
+		.leftJoin(photo, eq(photo.participantId, participant.id))
+		.where(eq(participant.eventId, me.eventId))
+		.orderBy(asc(participant.createdAt));
+
 	const wishes = await db
 		.select({ id: wish.id, text: wish.text, participantId: wish.participantId })
 		.from(wish)
@@ -394,6 +407,12 @@ export async function getInviteView(db: Db, token: string) {
 					wishes: wishes.filter((w) => w.participantId === assigned.id).map((w) => w.text)
 				}
 			: null,
+		players: players.map((p) => ({
+			name: p.name,
+			photoId: p.photoId,
+			ready: Boolean(p.ready),
+			isMe: p.id === me.id
+		})),
 		managerName: manager?.name ?? null,
 		firstOpen: !me.inviteOpenedAt
 	};

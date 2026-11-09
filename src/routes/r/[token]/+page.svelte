@@ -5,6 +5,7 @@
 	import Envelope from '#lib/components/Envelope.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import Hills from '#lib/components/Hills.svelte';
+	import PlayersGarland from '#lib/components/PlayersGarland.svelte';
 	import { formatDay } from '#lib/format.ts';
 	import { getT } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
@@ -133,6 +134,10 @@
 					<p class="secret">{i.secret(data.receiver.name)}</p>
 				</section>
 			{/if}
+
+			<div class="players">
+				<PlayersGarland players={data.players} t={i} showReady={!data.receiver} />
+			</div>
 
 			{#snippet ownList()}
 				<p class="muted">
@@ -496,12 +501,19 @@
 		line-height: 1.55;
 		color: #f6dcd8;
 	}
+	.players {
+		flex: 1 1 100%;
+		min-width: 0;
+	}
 	.lists.stacked {
 		flex-direction: column;
+		flex-wrap: nowrap;
+		justify-content: flex-start;
 		align-items: stretch;
 		max-width: 760px;
 	}
-	.lists.stacked .card {
+	.lists.stacked .card,
+	.lists.stacked .players {
 		flex: none;
 	}
 	.lists .card.mine {

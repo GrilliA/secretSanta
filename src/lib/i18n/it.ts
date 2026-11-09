@@ -147,6 +147,14 @@ export const it = {
 		needOne: 'Aggiungi almeno un desiderio.',
 		edit: 'Modifica',
 		envelopeLetter: 'Quest’anno fai il regalo a…',
+		playersTitle: 'Chi gioca quest’anno',
+		playersReady: (ready: number, total: number) =>
+			ready === total
+				? 'Tutte le liste sono pronte!'
+				: `${ready} di ${total} hanno finito la lista`,
+		playersCount: (n: number) => (n === 1 ? '1 persona' : `${n} persone`),
+		you: 'Tu',
+		readyBadge: 'lista pronta',
 		photoOf: (name: string) => `Foto di ${name}`
 	},
 

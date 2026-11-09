@@ -149,6 +149,14 @@ export const es: Messages = {
 		needOne: 'Añade al menos un deseo.',
 		edit: 'Editar',
 		envelopeLetter: 'Este año le haces el regalo a…',
+		playersTitle: 'Quién juega este año',
+		playersReady: (ready: number, total: number) =>
+			ready === total
+				? '¡Todas las listas están terminadas!'
+				: `${ready} de ${total} han terminado su lista`,
+		playersCount: (n: number) => (n === 1 ? '1 persona' : `${n} personas`),
+		you: 'Tú',
+		readyBadge: 'lista terminada',
 		photoOf: (name: string) => `Foto de ${name}`
 	},
 
