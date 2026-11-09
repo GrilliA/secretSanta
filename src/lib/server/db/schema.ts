@@ -18,6 +18,8 @@ export const event = pgTable('event', {
 	/** Budget così come scritto dall'organizzatore (es. "30 €"). */
 	budget: text('budget'),
 	message: text('message'),
+	/** Lingua di email e pagine dell'evento ('it' | 'es'). */
+	locale: text('locale').notNull().default('it'),
 	organizerName: text('organizer_name').notNull(),
 	organizerEmail: text('organizer_email').notNull(),
 	/** Token segreto con cui l'organizzatore gestisce l'evento (link /evento/[adminToken]). */

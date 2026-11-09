@@ -4,6 +4,7 @@ import { getDb } from '#lib/server/db/index.ts';
 import { sendAdminLink } from '#lib/server/email/service.ts';
 import { createEvent } from '#lib/server/events.ts';
 import { appOrigin } from '#lib/server/origin.ts';
+import { toLocale } from '#lib/i18n/index.ts';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
@@ -11,16 +12,20 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const db = await getDb();
 
-		const result = await guard(() =>
-			createEvent(db, {
-				name: field(data, 'name'),
-				exchangeDate: field(data, 'exchangeDate'),
-				budget: field(data, 'budget'),
-				message: field(data, 'message'),
-				organizerName: field(data, 'organizerName'),
-				organizerEmail: field(data, 'organizerEmail'),
-				organizerPlays: data.get('organizerPlays') === 'on'
-			})
+		const locale = toLocale(field(data, 'locale'));
+		const result = await guard(
+			() =>
+				createEvent(db, {
+					name: field(data, 'name'),
+					exchangeDate: field(data, 'exchangeDate'),
+					budget: field(data, 'budget'),
+					message: field(data, 'message'),
+					organizerName: field(data, 'organizerName'),
+					organizerEmail: field(data, 'organizerEmail'),
+					organizerPlays: data.get('organizerPlays') === 'on',
+					locale
+				}),
+			() => locale
 		);
 		if (!('adminToken' in result)) return result;
 

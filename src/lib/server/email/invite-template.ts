@@ -1,3 +1,4 @@
+import { getT, type Messages } from '#lib/i18n/index.ts';
 import type { Invite, InviteKind } from '#lib/invites.ts';
 import { esc, renderLayout } from './layout.ts';
 
@@ -9,51 +10,54 @@ export interface InviteTemplateData {
 	budget: string | null;
 	message?: string | null;
 	link: string;
+	t?: Messages;
 }
 
 /**
- * Email per il partecipante.
+ * Email per il partecipante, nella lingua dell'evento.
  * - `wishlist` (fase 1): invito a scrivere la lista dei desideri, nessun abbinamento ancora.
  * - `draw` (fase 2): l'estrazione è fatta, apri la busta.
  */
 export function renderInviteEmail(d: InviteTemplateData) {
+	const t = d.t ?? getT('it');
+	const e = t.email;
 	const kind = d.kind ?? 'draw';
 	const name = d.invite.forName;
 	const managed = d.invite.managerName;
 
 	const notice = managed
-		? `Questa mail è per ${name}. La ricevi tu, ${managed}, perché gestisci il suo invito.` +
-			(kind === 'draw'
-				? ' Il tuo abbinamento arriva in una mail a parte.'
-				: ' Scrivi tu la sua lista dei desideri.')
+		? e.managedNotice(name, managed) +
+			(kind === 'draw' ? e.managedNoticeDraw : e.managedNoticeWishlist)
 		: null;
 
 	const facts: [string, string][] = [];
-	if (d.exchangeDate) facts.push(['Data scambio', d.exchangeDate]);
-	if (d.budget) facts.push(['Budget', d.budget]);
+	if (d.exchangeDate) facts.push([e.exchangeDate, d.exchangeDate]);
+	if (d.budget) facts.push([e.budget, d.budget]);
 
 	const message = d.message
 		? `<p style="margin:0 0 12px;font-style:italic">“${esc(d.message)}”</p>`
 		: '';
+	const em = (s: string) => `<em style="color:#F3D27A;font-weight:600">${esc(s)}</em>`;
 
 	const content =
 		kind === 'wishlist'
 			? {
-					titleHtml: `${esc(name)}, che cosa vorresti <em style="color:#F3D27A;font-weight:600">trovare sotto l’albero?</em>`,
-					bodyHtml: `${message}Prima dell’estrazione, scrivi la tua lista dei desideri: la vedrà solo chi ti farà il regalo. Quando hai finito, premi <strong>“La mia lista è pronta”</strong>.`,
-					cta: 'Scrivi la lista dei desideri',
-					footnote: 'Quando tutti avranno finito, riceverai una nuova mail con la busta da aprire.',
-					text: `Scrivi la tua lista dei desideri per ${d.eventName}`
+					titleHtml: `${esc(e.wishlist.title(name))} ${em(e.wishlist.titleEm)}`,
+					bodyHtml: `${message}${esc(e.wishlist.body)} <strong>${esc(e.wishlist.bodyButton)}</strong>.`,
+					cta: e.wishlist.cta,
+					footnote: e.wishlist.footnote,
+					text: e.wishlist.text(d.eventName)
 				}
 			: {
-					titleHtml: `${esc(name)}, è uscito il tuo <em style="color:#F3D27A;font-weight:600">abbinamento!</em>`,
-					bodyHtml: `${message}Apri il link per scoprire a chi fare il regalo e leggere la sua lista dei desideri.`,
-					cta: 'Scopri chi hai pescato',
-					footnote: 'Il link è personale: non inoltrarlo, altrimenti la sorpresa salta.',
-					text: `${name}, è uscito il tuo abbinamento per ${d.eventName}!`
+					titleHtml: `${esc(e.draw.title(name))} ${em(e.draw.titleEm)}`,
+					bodyHtml: `${message}${esc(e.draw.body)}`,
+					cta: e.draw.cta,
+					footnote: e.draw.footnote,
+					text: e.draw.text(name, d.eventName)
 				};
 
 	const html = renderLayout({
+		lang: t.locale,
 		subject: d.invite.subject,
 		eyebrow: d.eventName,
 		titleHtml: content.titleHtml,
@@ -68,10 +72,10 @@ export function renderInviteEmail(d: InviteTemplateData) {
 		content.text,
 		notice ?? '',
 		d.message ? `“${d.message}”` : '',
-		d.exchangeDate ? `Data scambio: ${d.exchangeDate}` : '',
-		d.budget ? `Budget: ${d.budget}` : '',
+		d.exchangeDate ? `${e.exchangeDate}: ${d.exchangeDate}` : '',
+		d.budget ? `${e.budget}: ${d.budget}` : '',
 		`${content.cta}: ${d.link}`,
-		'Il link è personale: non inoltrarlo.'
+		e.personalLink
 	]
 		.filter(Boolean)
 		.join('\n');

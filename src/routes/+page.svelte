@@ -4,9 +4,12 @@
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import Hills from '#lib/components/Hills.svelte';
 	import Snowflake from '#lib/components/Snowflake.svelte';
+	import { resolve } from '$app/paths';
+	import { getT, LOCALES } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
 
-	let { form }: PageProps = $props();
+	let { data, form }: PageProps = $props();
+	const t = $derived(getT(data.uiLocale));
 	let submitting = $state(false);
 </script>
 
@@ -14,21 +17,29 @@
 	<Baubles />
 	<header class="container top">
 		<GiftIcon size={30} />
-		<span class="brand">Secret Santa</span>
+		<span class="brand">{t.home.title}</span>
+		<nav class="langs" aria-label={t.home.switchTo}>
+			{#each LOCALES as l (l)}
+				<a
+					href="{resolve('/')}?lang={l}"
+					hreflang={l}
+					lang={l}
+					aria-current={l === t.locale ? 'true' : undefined}
+					data-sveltekit-reload>{getT(l).languageName}</a
+				>
+			{/each}
+		</nav>
 	</header>
 
 	<main class="container hero">
 		<section class="intro">
-			<span class="eyebrow"><Snowflake /> Natale 2026</span>
-			<h1>Lo scambio di regali, <em>senza bigliettini.</em></h1>
-			<p>
-				Crea l’evento, aggiungi la famiglia e invia gli inviti via email. Ognuno scopre in segreto a
-				chi fare il regalo.
-			</p>
+			<span class="eyebrow"><Snowflake /> {t.home.eyebrow}</span>
+			<h1>{t.home.headline}<em>{t.home.headlineEm}</em></h1>
+			<p>{t.home.intro}</p>
 			<ol>
-				<li><span class="step active">1</span>Crea l’evento</li>
-				<li><span class="step">2</span>Aggiungi i partecipanti</li>
-				<li><span class="step">3</span>Estrai e invia gli inviti</li>
+				{#each t.home.steps as step, i (i)}
+					<li><span class="step" class:active={i === 0}>{i + 1}</span>{step}</li>
+				{/each}
 			</ol>
 		</section>
 
@@ -57,34 +68,34 @@
 				<circle cx="32" cy="20" r="6" fill="var(--holly-700)" />
 			</svg>
 			<div class="form-head">
-				<span>Passo 1 di 3</span>
-				<h2>Il tuo evento</h2>
+				<span>{t.home.stepOf(1)}</span>
+				<h2>{t.home.formTitle}</h2>
 			</div>
 			<div class="field">
-				<label for="name">Nome dell’evento</label>
-				<input id="name" name="name" class="input" value="Natale in famiglia" required />
+				<label for="name">{t.home.eventName}</label>
+				<input id="name" name="name" class="input" value={t.home.eventNameDefault} required />
 			</div>
 			<div class="row">
 				<div class="field">
-					<label for="date">Data scambio</label>
+					<label for="date">{t.home.exchangeDate}</label>
 					<input id="date" name="exchangeDate" class="input" type="date" value="2026-12-25" />
 				</div>
 				<div class="field">
-					<label for="budget">Budget</label>
-					<input id="budget" name="budget" class="input" placeholder="es. 30 €" />
+					<label for="budget">{t.common.budget}</label>
+					<input id="budget" name="budget" class="input" placeholder={t.home.budgetPlaceholder} />
 				</div>
 			</div>
 			<div class="field">
-				<label for="msg">Messaggio per tutti <span class="muted">(facoltativo)</span></label>
+				<label for="msg">{t.home.message} <span class="muted">{t.home.optional}</span></label>
 				<textarea id="msg" name="message" class="input" rows="2"></textarea>
 			</div>
 			<div class="row">
 				<div class="field">
-					<label for="oname">Il tuo nome</label>
+					<label for="oname">{t.home.yourName}</label>
 					<input id="oname" name="organizerName" class="input" autocomplete="given-name" required />
 				</div>
 				<div class="field">
-					<label for="oemail">La tua email</label>
+					<label for="oemail">{t.home.yourEmail}</label>
 					<input
 						id="oemail"
 						name="organizerEmail"
@@ -95,16 +106,24 @@
 					/>
 				</div>
 			</div>
+			<div class="field">
+				<label for="locale">{t.home.language}</label>
+				<select id="locale" name="locale" class="input" value={t.locale}>
+					{#each LOCALES as l (l)}
+						<option value={l}>{getT(l).languageName}</option>
+					{/each}
+				</select>
+			</div>
 			<label class="toggle">
 				<span>
-					<strong>Partecipo anch’io</strong>
-					<small>Non vedrai gli abbinamenti degli altri</small>
+					<strong>{t.home.plays}</strong>
+					<small>{t.home.playsHint}</small>
 				</span>
 				<input type="checkbox" name="organizerPlays" checked />
 			</label>
 			{#if form?.error}<p class="err" role="alert">{form.error}</p>{/if}
 			<button class="btn btn-primary" type="submit" disabled={submitting}>
-				{submitting ? 'Creo l’evento…' : 'Avanti: aggiungi partecipanti'}
+				{submitting ? t.home.submitting : t.home.submit}
 			</button>
 		</form>
 	</main>
@@ -127,6 +146,31 @@
 		gap: 10px;
 		padding-block: 24px;
 		color: var(--cream);
+	}
+	.langs {
+		position: relative;
+		z-index: 1;
+		margin-left: auto;
+		display: flex;
+		gap: 4px;
+		padding: 4px;
+		border-radius: 999px;
+		background: var(--pine-700);
+	}
+	.langs a {
+		min-height: 36px;
+		display: inline-flex;
+		align-items: center;
+		padding: 0 14px;
+		border-radius: 999px;
+		color: var(--cream);
+		font-size: 14px;
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.langs a[aria-current='true'] {
+		background: var(--cream);
+		color: var(--pine);
 	}
 	.brand {
 		font-family: var(--font-display);

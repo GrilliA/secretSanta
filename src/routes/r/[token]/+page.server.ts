@@ -5,6 +5,7 @@ import { sendAllReady } from '#lib/server/email/service.ts';
 import {
 	addWish,
 	getInviteView,
+	localeForToken,
 	markOpened,
 	removeWish,
 	setWishlistReady
@@ -29,22 +30,25 @@ export const actions: Actions = {
 	addWish: async ({ params, request }) => {
 		const data = await request.formData();
 		const db = await getDb();
+		const lang = () => localeForToken(db, params.token);
 		return guard(async () => {
 			await addWish(db, params.token, field(data, 'text'));
 			return { ok: true };
-		});
+		}, lang);
 	},
 	removeWish: async ({ params, request }) => {
 		const data = await request.formData();
 		const db = await getDb();
+		const lang = () => localeForToken(db, params.token);
 		return guard(async () => {
 			await removeWish(db, params.token, field(data, 'id'));
 			return { ok: true };
-		});
+		}, lang);
 	},
 	ready: async ({ params, request, url }) => {
 		const data = await request.formData();
 		const db = await getDb();
+		const lang = () => localeForToken(db, params.token);
 		return guard(async () => {
 			const { notifyOrganizer, count } = await setWishlistReady(
 				db,
@@ -59,6 +63,6 @@ export const actions: Actions = {
 				}
 			}
 			return { ok: true };
-		});
+		}, lang);
 	}
 };

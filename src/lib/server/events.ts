@@ -5,30 +5,37 @@ import type { Db } from './db/index.ts';
 import { assignment, event, exclusion, participant, photo, wish } from './db/schema.ts';
 import type { PhotoInput } from './photos.ts';
 import { createToken } from './token.ts';
+import { getT, toLocale, type Locale, type Messages } from '#lib/i18n/index.ts';
 
 /** Errore di dominio con messaggio mostrabile all'utente. */
+/**
+ * Errore di dominio con messaggio mostrabile all'utente, tradotto nella lingua dell'evento
+ * da `guard()`. `message` resta in italiano per log e test.
+ */
 export class EventError extends Error {
 	constructor(
-		message: string,
+		readonly render: (t: Messages) => string,
 		readonly status = 400
 	) {
-		super(message);
+		super(render(getT('it')));
 		this.name = 'EventError';
 	}
 }
 
+type LabelKey = keyof Messages['errors']['labels'];
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function requireText(value: string | null | undefined, label: string, max = 120) {
+function requireText(value: string | null | undefined, label: LabelKey, max = 120) {
 	const v = (value ?? '').trim();
-	if (!v) throw new EventError(`${label}: campo obbligatorio.`);
-	if (v.length > max) throw new EventError(`${label}: massimo ${max} caratteri.`);
+	if (!v) throw new EventError((t) => t.errors.required(t.errors.labels[label]));
+	if (v.length > max) throw new EventError((t) => t.errors.tooLong(t.errors.labels[label], max));
 	return v;
 }
 
 function requireEmail(value: string | null | undefined) {
 	const v = normalizeEmail(value ?? '');
-	if (!EMAIL_RE.test(v)) throw new EventError('Email non valida.');
+	if (!EMAIL_RE.test(v)) throw new EventError((t) => t.errors.invalidEmail);
 	return v;
 }
 
@@ -47,22 +54,24 @@ export interface CreateEventInput {
 	organizerName: string;
 	organizerEmail: string;
 	organizerPlays: boolean;
+	locale?: string | null;
 }
 
 export async function createEvent(db: Db, input: CreateEventInput) {
-	const organizerName = requireText(input.organizerName, 'Il tuo nome', 60);
+	const organizerName = requireText(input.organizerName, 'yourName', 60);
 	const organizerEmail = requireEmail(input.organizerEmail);
 	const exchangeDate = input.exchangeDate?.match(/^\d{4}-\d{2}-\d{2}$/) ? input.exchangeDate : null;
 
 	const [created] = await db
 		.insert(event)
 		.values({
-			name: requireText(input.name, 'Nome dell’evento'),
+			name: requireText(input.name, 'eventName'),
 			exchangeDate,
 			budget: optionalText(input.budget, 40),
 			message: optionalText(input.message),
 			organizerName,
 			organizerEmail,
+			locale: toLocale(input.locale),
 			adminToken: createToken()
 		})
 		.returning();
@@ -116,9 +125,8 @@ export async function getAdminView(db: Db, adminToken: string) {
 
 async function requireEditableEvent(db: Db, adminToken: string) {
 	const [ev] = await db.select().from(event).where(eq(event.adminToken, adminToken));
-	if (!ev) throw new EventError('Evento non trovato.', 404);
-	if (ev.drawnAt)
-		throw new EventError('L’estrazione è già stata fatta: non si può più modificare.');
+	if (!ev) throw new EventError((t) => t.errors.eventNotFound, 404);
+	if (ev.drawnAt) throw new EventError((t) => t.errors.alreadyDrawnLocked);
 	return ev;
 }
 
@@ -133,7 +141,7 @@ export interface AddParticipantInput {
 
 export async function addParticipant(db: Db, adminToken: string, input: AddParticipantInput) {
 	const ev = await requireEditableEvent(db, adminToken);
-	const name = requireText(input.name, 'Nome', 60);
+	const name = requireText(input.name, 'name', 60);
 
 	let email: string;
 	let managedById: string | null = null;
@@ -142,9 +150,9 @@ export async function addParticipant(db: Db, adminToken: string, input: AddParti
 			.select()
 			.from(participant)
 			.where(and(eq(participant.id, input.managedById), eq(participant.eventId, ev.id)));
-		if (!manager) throw new EventError('Chi gestisce l’invito non fa parte dell’evento.');
+		if (!manager) throw new EventError((t) => t.errors.managerNotInEvent);
 		if (manager.managedById) {
-			throw new EventError(`${manager.name} ha già l’invito gestito da qualcun altro.`);
+			throw new EventError((t) => t.errors.managerIsManaged(manager.name));
 		}
 		email = manager.email;
 		managedById = manager.id;
@@ -176,7 +184,7 @@ async function requireParticipantOfEvent(db: Db, adminToken: string, participant
 		.from(participant)
 		.innerJoin(event, eq(event.id, participant.eventId))
 		.where(and(eq(event.adminToken, adminToken), eq(participant.id, participantId)));
-	if (!row) throw new EventError('Partecipante non trovato.', 404);
+	if (!row) throw new EventError((t) => t.errors.participantNotFound, 404);
 	return row;
 }
 
@@ -217,12 +225,12 @@ export async function removeParticipant(db: Db, adminToken: string, participantI
 
 export async function addExclusion(db: Db, adminToken: string, a: string, b: string) {
 	const ev = await requireEditableEvent(db, adminToken);
-	if (!a || !b || a === b) throw new EventError('Scegli due persone diverse.');
+	if (!a || !b || a === b) throw new EventError((t) => t.errors.samePerson);
 	const found = await db
 		.select({ id: participant.id })
 		.from(participant)
 		.where(and(eq(participant.eventId, ev.id), inArray(participant.id, [a, b])));
-	if (found.length !== 2) throw new EventError('Persone non valide.');
+	if (found.length !== 2) throw new EventError((t) => t.errors.invalidPeople);
 
 	const [aId, bId] = a < b ? [a, b] : [b, a];
 	await db.insert(exclusion).values({ eventId: ev.id, aId, bId }).onConflictDoNothing();
@@ -261,7 +269,7 @@ export async function runDraw(db: Db, adminToken: string, rng?: Rng) {
 		.set({ drawnAt: new Date() })
 		.where(and(eq(event.id, ev.id), isNull(event.drawnAt)))
 		.returning({ id: event.id });
-	if (locked.length === 0) throw new EventError('L’estrazione è già stata fatta.');
+	if (locked.length === 0) throw new EventError((t) => t.errors.alreadyDrawn);
 
 	try {
 		await db
@@ -294,7 +302,7 @@ export async function getInviteParticipants(
 	options: { onlyIds?: string[]; onlyNotInvited?: boolean } = {}
 ) {
 	const [ev] = await db.select().from(event).where(eq(event.adminToken, adminToken));
-	if (!ev) throw new EventError('Evento non trovato.', 404);
+	if (!ev) throw new EventError((t) => t.errors.eventNotFound, 404);
 	const people = await db.select().from(participant).where(eq(participant.eventId, ev.id));
 	const kind: InviteKind = ev.drawnAt ? 'draw' : 'wishlist';
 
@@ -303,7 +311,7 @@ export async function getInviteParticipants(
 		.filter((p) => !(options.onlyNotInvited && kind === 'wishlist' && p.wishlistInvitedAt))
 		.map((p) => p.id);
 	if (kind === 'wishlist' && people.length === 0) {
-		throw new EventError('Aggiungi prima qualche partecipante.');
+		throw new EventError((t) => t.errors.noParticipants);
 	}
 
 	return {
@@ -370,7 +378,8 @@ export async function getInviteView(db: Db, token: string) {
 			exchangeDate: ev.exchangeDate,
 			budget: ev.budget,
 			message: ev.message,
-			organizerName: ev.organizerName
+			organizerName: ev.organizerName,
+			locale: toLocale(ev.locale)
 		},
 		me: {
 			id: me.id,
@@ -401,16 +410,16 @@ const MAX_WISHES = 15;
 
 export async function addWish(db: Db, token: string, text: string) {
 	const [me] = await db.select().from(participant).where(eq(participant.token, token));
-	if (!me) throw new EventError('Invito non trovato.', 404);
-	const value = requireText(text, 'Desiderio', 140);
+	if (!me) throw new EventError((t) => t.errors.inviteNotFound, 404);
+	const value = requireText(text, 'wish', 140);
 	const existing = await db.select({ id: wish.id }).from(wish).where(eq(wish.participantId, me.id));
-	if (existing.length >= MAX_WISHES) throw new EventError(`Massimo ${MAX_WISHES} desideri.`);
+	if (existing.length >= MAX_WISHES) throw new EventError((t) => t.errors.maxWishes(MAX_WISHES));
 	await db.insert(wish).values({ participantId: me.id, text: value });
 }
 
 export async function removeWish(db: Db, token: string, wishId: string) {
 	const [me] = await db.select().from(participant).where(eq(participant.token, token));
-	if (!me) throw new EventError('Invito non trovato.', 404);
+	if (!me) throw new EventError((t) => t.errors.inviteNotFound, 404);
 	await db.delete(wish).where(and(eq(wish.id, wishId), eq(wish.participantId, me.id)));
 }
 
@@ -423,7 +432,7 @@ export async function removeWish(db: Db, token: string, wishId: string) {
  */
 export async function setWishlistReady(db: Db, token: string, ready: boolean) {
 	const [me] = await db.select().from(participant).where(eq(participant.token, token));
-	if (!me) throw new EventError('Invito non trovato.', 404);
+	if (!me) throw new EventError((t) => t.errors.inviteNotFound, 404);
 
 	await db
 		.update(participant)
@@ -443,4 +452,25 @@ export async function setWishlistReady(db: Db, token: string, ready: boolean) {
 		.where(and(eq(event.id, me.eventId), isNull(event.readyNotifiedAt), isNull(event.drawnAt)))
 		.returning();
 	return { notifyOrganizer: ev ?? null, count: people.length };
+}
+
+// ---------------------------------------------------------------- lingua
+
+/** Lingua dell'evento gestito da questo link (per tradurre gli errori delle actions). */
+export async function localeForAdmin(db: Db, adminToken: string): Promise<Locale> {
+	const [row] = await db
+		.select({ locale: event.locale })
+		.from(event)
+		.where(eq(event.adminToken, adminToken));
+	return toLocale(row?.locale);
+}
+
+/** Lingua dell'evento a cui appartiene questo invito personale. */
+export async function localeForToken(db: Db, token: string): Promise<Locale> {
+	const [row] = await db
+		.select({ locale: event.locale })
+		.from(participant)
+		.innerJoin(event, eq(event.id, participant.eventId))
+		.where(eq(participant.token, token));
+	return toLocale(row?.locale);
 }
