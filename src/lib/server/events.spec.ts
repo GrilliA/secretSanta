@@ -362,3 +362,25 @@ describe('lingua dell’evento', () => {
 		expect(await localeForAdmin(db, ev.adminToken)).toBe('it');
 	});
 });
+
+describe('lista dei partecipanti nell’invito', () => {
+	it('mostra chi gioca con foto e stato, senza dati sensibili', async () => {
+		await setupFamily();
+		const [first, second] = await db.query.participant.findMany();
+		await setWishlistReady(db, second.token, true);
+		const view = await getInviteView(db, first.token);
+
+		expect(view?.players.map((p) => p.name)).toEqual(['Alessio', 'Nonna Rosa', 'Giulia', 'Marco']);
+		expect(view?.players.filter((p) => p.isMe).map((p) => p.name)).toEqual([first.name]);
+		expect(view?.players.find((p) => p.name === second.name)?.ready).toBe(true);
+		expect(Object.keys(view!.players[0]).sort()).toEqual(['isMe', 'name', 'photoId', 'ready']);
+	});
+
+	it('dopo l’estrazione la lista non rivela chi ha pescato chi', async () => {
+		await setupFamily();
+		const { participants } = await runDraw(db, admin);
+		const view = await getInviteView(db, participants[0].token);
+		const json = JSON.stringify(view?.players);
+		expect(json).not.toMatch(/receiver|giver|token|email/i);
+	});
+});
