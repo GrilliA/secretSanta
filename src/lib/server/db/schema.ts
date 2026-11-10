@@ -18,6 +18,10 @@ export const event = pgTable('event', {
 	/** Budget così come scritto dall'organizzatore (es. "30 €"). */
 	budget: text('budget'),
 	message: text('message'),
+	/** Video di sfondo della pagina della busta (Vercel Blob o, in sviluppo, file locale). */
+	videoUrl: text('video_url'),
+	/** Fotogramma del video (data URL JPEG) mostrato mentre carica o con "riduci movimento". */
+	videoPoster: text('video_poster'),
 	/** Lingua di email e pagine dell'evento ('it' | 'es'). */
 	locale: text('locale').notNull().default('it'),
 	organizerName: text('organizer_name').notNull(),

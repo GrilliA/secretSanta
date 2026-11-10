@@ -16,6 +16,11 @@ export const variables = defineEnvVars({
 		description: 'Mittente delle email, es. "Secret Santa <santa@tuodominio.it>".',
 		schema: (value) => value || 'Secret Santa <onboarding@resend.dev>'
 	},
+	BLOB_READ_WRITE_TOKEN: {
+		description:
+			'Token di Vercel Blob per i video di sfondo. In sviluppo, se vuoto, i video si salvano in .uploads/.',
+		schema: optional
+	},
 	APP_URL: {
 		description:
 			'URL pubblico dell’app per i link nelle email. Se vuoto si usa l’origine della richiesta.',

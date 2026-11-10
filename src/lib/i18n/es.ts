@@ -106,7 +106,8 @@ export const es: Messages = {
 		willNotify: 'Te enviaremos un email cuando todos hayan terminado.',
 		inviteNew: (n: number) =>
 			n === 1 ? 'Invitar a la persona nueva' : `Invitar a las ${n} personas nuevas`,
-		inviteAll: (n: number) => `Enviar ${n} invitaciones para la lista`,
+		inviteAll: (n: number) =>
+			n === 1 ? 'Enviar 1 invitación para la lista' : `Enviar ${n} invitaciones para la lista`,
 		step2: '2. Sorteo',
 		drawButton: 'Sortear y enviar los sobres',
 		needThree: 'Hacen falta al menos 3 personas.',
@@ -115,7 +116,23 @@ export const es: Messages = {
 				? '1 persona todavía no ha terminado su lista. '
 				: `${n} personas todavía no han terminado su lista. `,
 		confirmDraw: (n: number) =>
-			`¿Sortear y enviar ${n} sobres? Después ya no podrás cambiar los participantes.`
+			`¿Sortear y enviar ${n} sobres? Después ya no podrás cambiar los participantes.`,
+		video: {
+			title: 'Vídeo de fondo',
+			hint: 'Aparece detrás del sobre cuando cada uno abre su invitación. Sin sonido y en bucle: un vídeo corto (10–30 segundos) es perfecto.',
+			choose: 'Elegir un vídeo',
+			change: 'Cambiar vídeo',
+			remove: 'Quitar',
+			uploading: (pct: number) => `Subiendo… ${pct}%`,
+			saving: 'Guardando…',
+			limits: 'MP4, WebM o MOV · máximo 40 MB',
+			tooBig: 'El vídeo es demasiado grande: máximo 40 MB.',
+			format: 'Formato no admitido: usa MP4, WebM o MOV.',
+			unreadable: 'No puedo leer este vídeo: prueba con otro archivo.',
+			failed: 'No se ha podido subir. Inténtalo de nuevo.',
+			unavailable: 'La subida de vídeos no está configurada.',
+			preview: 'Vista previa del vídeo de fondo'
+		}
 	},
 
 	invite: {
@@ -157,7 +174,9 @@ export const es: Messages = {
 		playersCount: (n: number) => (n === 1 ? '1 persona' : `${n} personas`),
 		you: 'Tú',
 		readyBadge: 'lista terminada',
-		photoOf: (name: string) => `Foto de ${name}`
+		photoOf: (name: string) => `Foto de ${name}`,
+		pauseVideo: 'Pausar el vídeo de fondo',
+		playVideo: 'Reproducir el vídeo de fondo'
 	},
 
 	email: {
@@ -238,6 +257,11 @@ export const es: Messages = {
 		allInvited: 'Todos han recibido ya la invitación.',
 		needThree: 'Hacen falta al menos 3 participantes.',
 		drawImpossible: 'No se puede completar el sorteo con estas exclusiones.',
+		videoInvalid: 'Vídeo no válido: vuelve a subirlo.',
+		videoMissing: 'Elige un vídeo.',
+		videoTooBig: 'El vídeo es demasiado grande: máximo 40 MB.',
+		videoFormat: 'Formato no admitido: usa MP4, WebM o MOV.',
+		videoPoster: 'Vista previa del vídeo no válida.',
 		labels: {
 			yourName: 'Tu nombre',
 			eventName: 'Nombre del evento',

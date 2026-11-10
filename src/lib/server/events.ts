@@ -392,7 +392,9 @@ export async function getInviteView(db: Db, token: string) {
 			budget: ev.budget,
 			message: ev.message,
 			organizerName: ev.organizerName,
-			locale: toLocale(ev.locale)
+			locale: toLocale(ev.locale),
+			videoUrl: ev.videoUrl,
+			videoPoster: ev.videoPoster
 		},
 		me: {
 			id: me.id,
@@ -492,4 +494,30 @@ export async function localeForToken(db: Db, token: string): Promise<Locale> {
 		.innerJoin(event, eq(event.id, participant.eventId))
 		.where(eq(participant.token, token));
 	return toLocale(row?.locale);
+}
+
+// ------------------------------------------------------- video di sfondo
+
+/** Evento gestito da questo link (serve all'upload per decidere il percorso del file). */
+export async function requireEventForAdmin(db: Db, adminToken: string) {
+	const [ev] = await db
+		.select({ id: event.id, videoUrl: event.videoUrl })
+		.from(event)
+		.where(eq(event.adminToken, adminToken));
+	if (!ev) throw new EventError((t) => t.errors.eventNotFound, 404);
+	return ev;
+}
+
+/** Imposta (o toglie, con url null) il video di sfondo. Restituisce l'URL precedente da cancellare. */
+export async function setEventVideo(
+	db: Db,
+	adminToken: string,
+	video: { url: string; poster: string | null } | null
+) {
+	const ev = await requireEventForAdmin(db, adminToken);
+	await db
+		.update(event)
+		.set({ videoUrl: video?.url ?? null, videoPoster: video?.poster ?? null })
+		.where(eq(event.id, ev.id));
+	return { previousUrl: ev.videoUrl && ev.videoUrl !== video?.url ? ev.videoUrl : null };
 }

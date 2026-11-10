@@ -384,3 +384,34 @@ describe('lista dei partecipanti nell’invito', () => {
 		expect(json).not.toMatch(/receiver|giver|token|email/i);
 	});
 });
+
+describe('video di sfondo', () => {
+	it('si imposta, compare nell’invito e restituisce il vecchio URL da cancellare', async () => {
+		await setupFamily();
+		const { setEventVideo, requireEventForAdmin } = await import('./events.ts');
+		const ev = await requireEventForAdmin(db, admin);
+		expect(ev.videoUrl).toBeNull();
+
+		const first = await setEventVideo(db, admin, { url: '/media/video/a.mp4', poster: null });
+		expect(first.previousUrl).toBeNull();
+		const second = await setEventVideo(db, admin, {
+			url: '/media/video/b.mp4',
+			poster: 'data:image/jpeg;base64,AAAA'
+		});
+		expect(second.previousUrl).toBe('/media/video/a.mp4');
+
+		const [p] = await db.query.participant.findMany();
+		const view = await getInviteView(db, p.token);
+		expect(view?.event.videoUrl).toBe('/media/video/b.mp4');
+		expect(view?.event.videoPoster).toBe('data:image/jpeg;base64,AAAA');
+
+		const removed = await setEventVideo(db, admin, null);
+		expect(removed.previousUrl).toBe('/media/video/b.mp4');
+		expect((await getInviteView(db, p.token))?.event.videoUrl).toBeNull();
+	});
+
+	it('serve un link di gestione valido', async () => {
+		const { setEventVideo } = await import('./events.ts');
+		await expect(setEventVideo(db, 'nope', null)).rejects.toThrow(EventError);
+	});
+});

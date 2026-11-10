@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import VideoUpload from '#lib/components/VideoUpload.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import { preparePhoto, replaceInputFile } from '#lib/photo-client.ts';
 	import { formatDay } from '#lib/format.ts';
@@ -355,6 +356,15 @@
 					</form>
 				</section>
 			{/if}
+
+			<VideoUpload
+				t={a.video}
+				mode={data.videoMode}
+				eventId={data.event.id}
+				adminToken={page.params.admin ?? ''}
+				videoUrl={data.event.videoUrl}
+				videoPoster={data.event.videoPoster}
+			/>
 
 			<section class="cta snow">
 				{#if drawn}
