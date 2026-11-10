@@ -6,6 +6,7 @@
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import Hills from '#lib/components/Hills.svelte';
 	import PlayersGarland from '#lib/components/PlayersGarland.svelte';
+	import VideoBackdrop from '#lib/components/VideoBackdrop.svelte';
 	import { formatDay } from '#lib/format.ts';
 	import { getT } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
@@ -26,7 +27,20 @@
 <svelte:head><title>{i.pageTitle(data.event.name)}</title></svelte:head>
 
 <div class="page">
-	<section class="hero snow" class:tall={data.receiver && phase !== 'revealed'}>
+	<section
+		class="hero"
+		class:snow={!data.event.videoUrl}
+		class:has-video={data.event.videoUrl}
+		class:tall={data.receiver && phase !== 'revealed'}
+	>
+		{#if data.event.videoUrl}
+			<VideoBackdrop
+				src={data.event.videoUrl}
+				poster={data.event.videoPoster}
+				pauseLabel={i.pauseVideo}
+				playLabel={i.playVideo}
+			/>
+		{/if}
 		<Baubles tone="pine" />
 		<div class="container inner">
 			<div class="top">
@@ -242,6 +256,17 @@
 		overflow: hidden;
 		background-color: var(--holly-700);
 		color: var(--cream);
+	}
+	.hero.has-video {
+		background-color: var(--holly-800);
+	}
+	.hero.has-video .inner {
+		text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+	}
+	@media (max-width: 560px) {
+		.hero.has-video .inner {
+			padding-bottom: 150px;
+		}
 	}
 	.hero.tall {
 		min-height: 640px;

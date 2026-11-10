@@ -61,6 +61,14 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
   (`#lib/photo-client.ts`), il server valida i byte reali (`#lib/server/photos.ts`) e le salva in base64
   nella tabella `photo`. Servite da `/foto/[photoId]` con cache immutable: l'id cambia a ogni sostituzione.
 
+## Video di sfondo
+
+- L'organizzatore carica un video (MP4/WebM/MOV, max 40 MB) dalla pagina di gestione; compare dietro la busta in `/r/[token]`.
+- Produzione: il browser carica **direttamente su Vercel Blob** (`@vercel/blob/client` → token da
+  `/evento/[adminToken]/video`, solo percorso `video/<eventId>/`), poi `?/video` verifica con `head()` e salva l'URL.
+- Sviluppo senza `BLOB_READ_WRITE_TOKEN`: `?/videoLocal` salva in `.uploads/video/`, servito da `/media/video/[name]`.
+- `event.videoPoster` è un fotogramma JPEG generato nel browser. Niente autoplay con reduced-motion/save-data; pulsante pausa sempre.
+
 ## Lingue (it / es)
 
 - Dizionari in `src/lib/i18n/it.ts` (riferimento) e `es.ts` (stessa forma, controllata da TS e da `i18n.spec.ts`).

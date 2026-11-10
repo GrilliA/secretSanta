@@ -104,7 +104,8 @@ export const it = {
 		willNotify: 'Ti mandiamo una mail quando tutti hanno finito.',
 		inviteNew: (n: number) =>
 			n === 1 ? 'Invita la persona nuova' : `Invita le ${n} persone nuove`,
-		inviteAll: (n: number) => `Invia ${n} inviti per la lista`,
+		inviteAll: (n: number) =>
+			n === 1 ? 'Invia 1 invito per la lista' : `Invia ${n} inviti per la lista`,
 		step2: '2. Estrazione',
 		drawButton: 'Estrai e invia le buste',
 		needThree: 'Servono almeno 3 persone.',
@@ -113,7 +114,23 @@ export const it = {
 				? '1 persona non ha ancora finito la lista. '
 				: `${n} persone non hanno ancora finito la lista. `,
 		confirmDraw: (n: number) =>
-			`Estrarre e inviare ${n} buste? Dopo non potrai più modificare i partecipanti.`
+			`Estrarre e inviare ${n} buste? Dopo non potrai più modificare i partecipanti.`,
+		video: {
+			title: 'Video di sfondo',
+			hint: 'Compare dietro la busta quando ognuno apre il suo invito. Senza audio, in loop: va benissimo un video breve (10–30 secondi).',
+			choose: 'Scegli un video',
+			change: 'Cambia video',
+			remove: 'Rimuovi',
+			uploading: (pct: number) => `Caricamento… ${pct}%`,
+			saving: 'Salvo…',
+			limits: 'MP4, WebM o MOV · massimo 40 MB',
+			tooBig: 'Il video è troppo grande: massimo 40 MB.',
+			format: 'Formato non supportato: usa MP4, WebM o MOV.',
+			unreadable: 'Non riesco a leggere questo video: prova con un altro file.',
+			failed: 'Caricamento non riuscito. Riprova.',
+			unavailable: 'Il caricamento dei video non è configurato.',
+			preview: 'Anteprima del video di sfondo'
+		}
 	},
 
 	invite: {
@@ -155,7 +172,9 @@ export const it = {
 		playersCount: (n: number) => (n === 1 ? '1 persona' : `${n} persone`),
 		you: 'Tu',
 		readyBadge: 'lista pronta',
-		photoOf: (name: string) => `Foto di ${name}`
+		photoOf: (name: string) => `Foto di ${name}`,
+		pauseVideo: 'Metti in pausa il video di sfondo',
+		playVideo: 'Riproduci il video di sfondo'
 	},
 
 	email: {
@@ -236,6 +255,11 @@ export const it = {
 		allInvited: 'Hanno già ricevuto tutti l’invito.',
 		needThree: 'Servono almeno 3 partecipanti.',
 		drawImpossible: 'Impossibile completare l’estrazione con queste esclusioni.',
+		videoInvalid: 'Video non valido: ricaricalo.',
+		videoMissing: 'Scegli un video.',
+		videoTooBig: 'Il video è troppo grande: massimo 40 MB.',
+		videoFormat: 'Formato non supportato: usa MP4, WebM o MOV.',
+		videoPoster: 'Anteprima del video non valida.',
 		labels: {
 			yourName: 'Il tuo nome',
 			eventName: 'Nome dell’evento',

@@ -10,10 +10,19 @@ import {
 	localeForAdmin,
 	removeExclusion,
 	removeParticipant,
+	requireEventForAdmin,
 	runDraw,
+	setEventVideo,
 	setPhoto
 } from '#lib/server/events.ts';
 import { readPhoto } from '#lib/server/photos.ts';
+import {
+	deleteVideo,
+	saveLocalVideo,
+	validatePoster,
+	verifyBlobVideo,
+	videoMode
+} from '#lib/server/video.ts';
 import { getT, toLocale } from '#lib/i18n/index.ts';
 import { appOrigin } from '#lib/server/origin.ts';
 import type { Actions, PageServerLoad } from './$types';
@@ -21,7 +30,12 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ params, url }) => {
 	const view = await getAdminView(await getDb(), params.admin);
 	if (!view) error(404, 'Evento non trovato');
-	return { ...view, locale: toLocale(view.event.locale), isNew: url.searchParams.has('nuovo') };
+	return {
+		...view,
+		locale: toLocale(view.event.locale),
+		isNew: url.searchParams.has('nuovo'),
+		videoMode: videoMode()
+	};
 };
 
 export const actions: Actions = {
@@ -120,6 +134,46 @@ export const actions: Actions = {
 			});
 			const result = await sendInvites(db, appOrigin(url), event, participants, sendTo, kind);
 			return { resent: true, ...result };
+		}, lang);
+	},
+	/** Video caricato direttamente su Vercel Blob dal browser: qui si verifica e si collega all'evento. */
+	video: async ({ params, request }) => {
+		const data = await request.formData();
+		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		return guard(async () => {
+			const ev = await requireEventForAdmin(db, params.admin);
+			const url = await verifyBlobVideo(field(data, 'url'), ev.id);
+			const poster = validatePoster(field(data, 'poster'));
+			const { previousUrl } = await setEventVideo(db, params.admin, { url, poster });
+			await deleteVideo(previousUrl);
+			return { ok: true };
+		}, lang);
+	},
+
+	/** Solo sviluppo senza token Blob: il file passa dal server e finisce in `.uploads/`. */
+	videoLocal: async ({ params, request }) => {
+		if (videoMode() !== 'local') return fail(404, { error: 'Not found' });
+		const data = await request.formData();
+		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		return guard(async () => {
+			const ev = await requireEventForAdmin(db, params.admin);
+			const poster = validatePoster(field(data, 'poster'));
+			const url = await saveLocalVideo(data.get('video'), ev.id);
+			const { previousUrl } = await setEventVideo(db, params.admin, { url, poster });
+			await deleteVideo(previousUrl);
+			return { ok: true };
+		}, lang);
+	},
+
+	removeVideo: async ({ params }) => {
+		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		return guard(async () => {
+			const { previousUrl } = await setEventVideo(db, params.admin, null);
+			await deleteVideo(previousUrl);
+			return { ok: true };
 		}, lang);
 	}
 };
