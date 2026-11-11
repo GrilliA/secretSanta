@@ -10,12 +10,19 @@ import type { RequestHandler } from './$types';
 const TYPES: Record<string, string> = {
 	mp4: 'video/mp4',
 	webm: 'video/webm',
-	mov: 'video/quicktime'
+	mov: 'video/quicktime',
+	mp3: 'audio/mpeg',
+	m4a: 'audio/mp4',
+	aac: 'audio/aac',
+	ogg: 'audio/ogg',
+	wav: 'audio/wav',
+	weba: 'audio/webm'
 };
 
 /** Solo sviluppo: serve i video salvati in `.uploads/video/`, con supporto alle richieste Range. */
 export const GET: RequestHandler = async ({ params, request }) => {
-	if (!dev || !/^[\w-]+\.(mp4|webm|mov)$/.test(params.name)) error(404, 'Not found');
+	if (!dev || !/^[\w-]+\.(mp4|webm|mov|mp3|m4a|aac|ogg|wav|weba)$/.test(params.name))
+		error(404, 'Not found');
 	const path = join(LOCAL_DIR, params.name);
 	const info = await stat(path).catch(() => null);
 	if (!info) error(404, 'Not found');

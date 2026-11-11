@@ -25,6 +25,8 @@ export const event = pgTable('event', {
 	/** Video alternativo per telefono (verticale), facoltativo. */
 	videoMobileUrl: text('video_mobile_url'),
 	videoMobilePoster: text('video_mobile_poster'),
+	/** Musica di sottofondo della pagina dell'invito (Vercel Blob o file locale in sviluppo). */
+	musicUrl: text('music_url'),
 	/** Lingua di email e pagine dell'evento ('it' | 'es'). */
 	locale: text('locale').notNull().default('it'),
 	organizerName: text('organizer_name').notNull(),

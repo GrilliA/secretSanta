@@ -134,6 +134,21 @@ export const it = {
 			failed: 'Caricamento non riuscito. Riprova.',
 			unavailable: 'Il caricamento dei video non è configurato.',
 			preview: 'Anteprima del video'
+		},
+		music: {
+			title: 'Musica di sottofondo',
+			hint: 'Suona mentre ognuno guarda il suo invito (dopo il video, se c’è). Chi la apre può sempre spegnerla.',
+			choose: 'Scegli una canzone',
+			change: 'Cambia canzone',
+			remove: 'Rimuovi',
+			uploading: (pct: number) => `Caricamento… ${pct}%`,
+			saving: 'Salvo…',
+			limits: 'MP3, M4A, OGG o WAV · massimo 15 MB',
+			tooBig: 'Il file è troppo grande: massimo 15 MB.',
+			format: 'Formato non supportato: usa MP3, M4A, OGG o WAV.',
+			failed: 'Caricamento non riuscito. Riprova.',
+			unavailable: 'Il caricamento della musica non è configurato.',
+			preview: 'Ascolta la musica'
 		}
 	},
 
@@ -181,7 +196,9 @@ export const it = {
 		skipIntro: 'Salta',
 		soundOn: 'Attiva audio',
 		soundOff: 'Togli audio',
-		replayIntro: 'Rivedi il video'
+		replayIntro: 'Rivedi il video',
+		musicOn: 'Metti la musica',
+		musicOff: 'Spegni la musica'
 	},
 
 	email: {
@@ -267,6 +284,10 @@ export const it = {
 		videoTooBig: 'Il video è troppo grande: massimo 40 MB.',
 		videoFormat: 'Formato non supportato: usa MP4, WebM o MOV.',
 		videoPoster: 'Anteprima del video non valida.',
+		musicInvalid: 'Musica non valida: ricaricala.',
+		musicMissing: 'Scegli una canzone.',
+		musicTooBig: 'Il file è troppo grande: massimo 15 MB.',
+		musicFormat: 'Formato non supportato: usa MP3, M4A, OGG o WAV.',
 		labels: {
 			yourName: 'Il tuo nome',
 			eventName: 'Nome dell’evento',

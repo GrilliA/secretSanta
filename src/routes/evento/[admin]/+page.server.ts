@@ -12,6 +12,7 @@ import {
 	removeParticipant,
 	requireEventForAdmin,
 	runDraw,
+	setEventMusic,
 	setEventVideo,
 	toVideoSlot,
 	setPhoto
@@ -177,6 +178,44 @@ export const actions: Actions = {
 		return guard(async () => {
 			const slot = toVideoSlot(field(data, 'slot'));
 			const { previousUrl } = await setEventVideo(db, params.admin, null, slot);
+			await deleteVideo(previousUrl);
+			return { ok: true };
+		}, lang);
+	},
+
+	/** Musica caricata su Vercel Blob dal browser (come il video). */
+	music: async ({ params, request }) => {
+		const data = await request.formData();
+		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		return guard(async () => {
+			const ev = await requireEventForAdmin(db, params.admin);
+			const url = await verifyBlobVideo(field(data, 'url'), ev.id, 'music');
+			const { previousUrl } = await setEventMusic(db, params.admin, url);
+			await deleteVideo(previousUrl);
+			return { ok: true };
+		}, lang);
+	},
+
+	musicLocal: async ({ params, request }) => {
+		if (videoMode() !== 'local') return fail(404, { error: 'Not found' });
+		const data = await request.formData();
+		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		return guard(async () => {
+			const ev = await requireEventForAdmin(db, params.admin);
+			const url = await saveLocalVideo(data.get('music'), ev.id, 'music');
+			const { previousUrl } = await setEventMusic(db, params.admin, url);
+			await deleteVideo(previousUrl);
+			return { ok: true };
+		}, lang);
+	},
+
+	removeMusic: async ({ params }) => {
+		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		return guard(async () => {
+			const { previousUrl } = await setEventMusic(db, params.admin, null);
 			await deleteVideo(previousUrl);
 			return { ok: true };
 		}, lang);

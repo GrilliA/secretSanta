@@ -6,6 +6,7 @@
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import Hills from '#lib/components/Hills.svelte';
 	import PlayersGarland from '#lib/components/PlayersGarland.svelte';
+	import MusicPlayer from '#lib/components/MusicPlayer.svelte';
 	import VideoIntro from '#lib/components/VideoIntro.svelte';
 	import { formatDay } from '#lib/format.ts';
 	import { getT } from '#lib/i18n/index.ts';
@@ -41,6 +42,9 @@
 		storageKey="intro:{page.params.token}:{data.event.videoUrl ?? ''}{data.event.videoMobileUrl ??
 			''}"
 	/>
+	{#if data.event.musicUrl}
+		<MusicPlayer src={data.event.musicUrl} t={i} paused={introOpen} />
+	{/if}
 
 	<section class="hero snow" class:tall={data.receiver && phase !== 'revealed'}>
 		<div class="container inner">
@@ -77,7 +81,6 @@
 							{i.writeText}
 						</p>
 					{/if}
-					{#if data.event.message}<p class="wait-text quote">“{data.event.message}”</p>{/if}
 				</div>
 			{:else if phase !== 'revealed'}
 				<div class="closed">
@@ -593,10 +596,6 @@
 	}
 	.mine[open] > :global(:not(summary)) {
 		margin-inline: 28px;
-	}
-	.quote {
-		font-style: italic;
-		color: var(--gold-300);
 	}
 	.ready {
 		display: flex;
