@@ -357,14 +357,32 @@
 				</section>
 			{/if}
 
-			<VideoUpload
-				t={a.video}
-				mode={data.videoMode}
-				eventId={data.event.id}
-				adminToken={page.params.admin ?? ''}
-				videoUrl={data.event.videoUrl}
-				videoPoster={data.event.videoPoster}
-			/>
+			<section class="card video-card">
+				<h2>{a.video.title}</h2>
+				<p class="muted">{a.video.hint}</p>
+				<VideoUpload
+					t={a.video}
+					slot="desktop"
+					label={a.video.desktop}
+					hint={a.video.desktopHint}
+					mode={data.videoMode}
+					eventId={data.event.id}
+					adminToken={page.params.admin ?? ''}
+					videoUrl={data.event.videoUrl}
+					videoPoster={data.event.videoPoster}
+				/>
+				<VideoUpload
+					t={a.video}
+					slot="mobile"
+					label={a.video.mobile}
+					hint={a.video.mobileHint}
+					mode={data.videoMode}
+					eventId={data.event.id}
+					adminToken={page.params.admin ?? ''}
+					videoUrl={data.event.videoMobileUrl}
+					videoPoster={data.event.videoMobilePoster}
+				/>
+			</section>
 
 			<section class="cta snow">
 				{#if drawn}
@@ -744,6 +762,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 24px;
+	}
+	.video-card {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+	.video-card .muted {
+		margin: 0;
 	}
 	.excl {
 		display: flex;

@@ -13,6 +13,7 @@ import {
 	requireEventForAdmin,
 	runDraw,
 	setEventVideo,
+	toVideoSlot,
 	setPhoto
 } from '#lib/server/events.ts';
 import { readPhoto } from '#lib/server/photos.ts';
@@ -145,7 +146,8 @@ export const actions: Actions = {
 			const ev = await requireEventForAdmin(db, params.admin);
 			const url = await verifyBlobVideo(field(data, 'url'), ev.id);
 			const poster = validatePoster(field(data, 'poster'));
-			const { previousUrl } = await setEventVideo(db, params.admin, { url, poster });
+			const slot = toVideoSlot(field(data, 'slot'));
+			const { previousUrl } = await setEventVideo(db, params.admin, { url, poster }, slot);
 			await deleteVideo(previousUrl);
 			return { ok: true };
 		}, lang);
@@ -161,17 +163,20 @@ export const actions: Actions = {
 			const ev = await requireEventForAdmin(db, params.admin);
 			const poster = validatePoster(field(data, 'poster'));
 			const url = await saveLocalVideo(data.get('video'), ev.id);
-			const { previousUrl } = await setEventVideo(db, params.admin, { url, poster });
+			const slot = toVideoSlot(field(data, 'slot'));
+			const { previousUrl } = await setEventVideo(db, params.admin, { url, poster }, slot);
 			await deleteVideo(previousUrl);
 			return { ok: true };
 		}, lang);
 	},
 
-	removeVideo: async ({ params }) => {
+	removeVideo: async ({ params, request }) => {
+		const data = await request.formData();
 		const db = await getDb();
 		const lang = () => localeForAdmin(db, params.admin);
 		return guard(async () => {
-			const { previousUrl } = await setEventVideo(db, params.admin, null);
+			const slot = toVideoSlot(field(data, 'slot'));
+			const { previousUrl } = await setEventVideo(db, params.admin, null, slot);
 			await deleteVideo(previousUrl);
 			return { ok: true };
 		}, lang);

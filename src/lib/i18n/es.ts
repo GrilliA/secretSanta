@@ -118,8 +118,12 @@ export const es: Messages = {
 		confirmDraw: (n: number) =>
 			`¿Sortear y enviar ${n} sobres? Después ya no podrás cambiar los participantes.`,
 		video: {
-			title: 'Vídeo de fondo',
-			hint: 'Aparece detrás del sobre cuando cada uno abre su invitación. Sin sonido y en bucle: un vídeo corto (10–30 segundos) es perfecto.',
+			title: 'Vídeo de bienvenida',
+			hint: 'Se reproduce a pantalla completa cuando cada uno abre su invitación y luego deja paso a la página. Un vídeo corto (10–30 segundos) es perfecto, también con música.',
+			desktop: 'Para ordenador',
+			desktopHint: 'Horizontal',
+			mobile: 'Para móvil',
+			mobileHint: 'Vertical · opcional: si no hay, el móvil usa el del ordenador',
 			choose: 'Elegir un vídeo',
 			change: 'Cambiar vídeo',
 			remove: 'Quitar',
@@ -131,7 +135,7 @@ export const es: Messages = {
 			unreadable: 'No puedo leer este vídeo: prueba con otro archivo.',
 			failed: 'No se ha podido subir. Inténtalo de nuevo.',
 			unavailable: 'La subida de vídeos no está configurada.',
-			preview: 'Vista previa del vídeo de fondo'
+			preview: 'Vista previa del vídeo'
 		}
 	},
 
@@ -175,8 +179,11 @@ export const es: Messages = {
 		you: 'Tú',
 		readyBadge: 'lista terminada',
 		photoOf: (name: string) => `Foto de ${name}`,
-		pauseVideo: 'Pausar el vídeo de fondo',
-		playVideo: 'Reproducir el vídeo de fondo'
+		introLabel: 'Vídeo de bienvenida',
+		skipIntro: 'Saltar',
+		soundOn: 'Activar sonido',
+		soundOff: 'Quitar sonido',
+		replayIntro: 'Ver otra vez el vídeo'
 	},
 
 	email: {

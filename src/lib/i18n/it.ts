@@ -116,8 +116,12 @@ export const it = {
 		confirmDraw: (n: number) =>
 			`Estrarre e inviare ${n} buste? Dopo non potrai più modificare i partecipanti.`,
 		video: {
-			title: 'Video di sfondo',
-			hint: 'Compare dietro la busta quando ognuno apre il suo invito. Senza audio, in loop: va benissimo un video breve (10–30 secondi).',
+			title: 'Video di benvenuto',
+			hint: 'Parte a tutto schermo quando ognuno apre il suo invito, poi lascia spazio alla pagina. Va benissimo un video breve (10–30 secondi), anche con musica.',
+			desktop: 'Per computer',
+			desktopHint: 'Orizzontale',
+			mobile: 'Per telefono',
+			mobileHint: 'Verticale · facoltativo: senza, il telefono usa quello per computer',
 			choose: 'Scegli un video',
 			change: 'Cambia video',
 			remove: 'Rimuovi',
@@ -129,7 +133,7 @@ export const it = {
 			unreadable: 'Non riesco a leggere questo video: prova con un altro file.',
 			failed: 'Caricamento non riuscito. Riprova.',
 			unavailable: 'Il caricamento dei video non è configurato.',
-			preview: 'Anteprima del video di sfondo'
+			preview: 'Anteprima del video'
 		}
 	},
 
@@ -173,8 +177,11 @@ export const it = {
 		you: 'Tu',
 		readyBadge: 'lista pronta',
 		photoOf: (name: string) => `Foto di ${name}`,
-		pauseVideo: 'Metti in pausa il video di sfondo',
-		playVideo: 'Riproduci il video di sfondo'
+		introLabel: 'Video di benvenuto',
+		skipIntro: 'Salta',
+		soundOn: 'Attiva audio',
+		soundOff: 'Togli audio',
+		replayIntro: 'Rivedi il video'
 	},
 
 	email: {
