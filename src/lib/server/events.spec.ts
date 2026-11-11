@@ -410,6 +410,22 @@ describe('video di sfondo', () => {
 		expect((await getInviteView(db, p.token))?.event.videoUrl).toBeNull();
 	});
 
+	it('il video per telefono è uno slot separato', async () => {
+		await setupFamily();
+		const { setEventVideo } = await import('./events.ts');
+		await setEventVideo(db, admin, { url: '/media/video/d.mp4', poster: null }, 'desktop');
+		const m = await setEventVideo(db, admin, { url: '/media/video/m.mp4', poster: null }, 'mobile');
+		expect(m.previousUrl).toBeNull();
+		const [p] = await db.query.participant.findMany();
+		const view = await getInviteView(db, p.token);
+		expect(view?.event.videoUrl).toBe('/media/video/d.mp4');
+		expect(view?.event.videoMobileUrl).toBe('/media/video/m.mp4');
+
+		const removed = await setEventVideo(db, admin, null, 'mobile');
+		expect(removed.previousUrl).toBe('/media/video/m.mp4');
+		expect((await getInviteView(db, p.token))?.event.videoUrl).toBe('/media/video/d.mp4');
+	});
+
 	it('serve un link di gestione valido', async () => {
 		const { setEventVideo } = await import('./events.ts');
 		await expect(setEventVideo(db, 'nope', null)).rejects.toThrow(EventError);

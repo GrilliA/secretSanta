@@ -9,18 +9,21 @@
 	let {
 		players,
 		t,
-		showReady = true
+		showReady = true,
+		dark = false
 	}: {
 		players: { name: string; photoId: string | null; ready: boolean; isMe: boolean }[];
 		t: Messages['invite'];
 		showReady?: boolean;
+		/** Variante trasparente per lo sfondo rosso in cima alla pagina dell'invito. */
+		dark?: boolean;
 	} = $props();
 
 	const ready = $derived(players.filter((p) => p.ready).length);
 	const tones = ['holly', 'pine', 'cream'] as const;
 </script>
 
-<section class="garland card" aria-labelledby="players-title">
+<section class="garland" class:card={!dark} class:dark aria-labelledby="players-title">
 	<header>
 		<h2 id="players-title">{t.playersTitle}</h2>
 		<span class="count">
@@ -210,6 +213,40 @@
 		font-weight: 600;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
+	}
+	.dark {
+		padding: 0;
+		overflow: visible;
+	}
+	.dark h2 {
+		color: var(--cream);
+		font-size: 22px;
+	}
+	.dark .count {
+		color: #f6dcd8;
+	}
+	.dark ul {
+		margin: 0 -8px;
+		padding: 0 8px;
+	}
+	.dark .name {
+		color: var(--cream);
+	}
+	.dark .ball {
+		box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
+	}
+	.dark .ball :global(.avatar) {
+		border-color: var(--holly-700);
+	}
+	.dark .me .ball {
+		background: conic-gradient(#fff, var(--gold-300), #fff, var(--gold), #fff);
+	}
+	.dark .you {
+		background: var(--gold-300);
+		color: var(--holly-800);
+	}
+	.dark .check {
+		border-color: var(--holly-700);
 	}
 	@keyframes drop {
 		from {

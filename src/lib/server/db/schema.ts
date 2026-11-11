@@ -22,6 +22,9 @@ export const event = pgTable('event', {
 	videoUrl: text('video_url'),
 	/** Fotogramma del video (data URL JPEG) mostrato mentre carica o con "riduci movimento". */
 	videoPoster: text('video_poster'),
+	/** Video alternativo per telefono (verticale), facoltativo. */
+	videoMobileUrl: text('video_mobile_url'),
+	videoMobilePoster: text('video_mobile_poster'),
 	/** Lingua di email e pagine dell'evento ('it' | 'es'). */
 	locale: text('locale').notNull().default('it'),
 	organizerName: text('organizer_name').notNull(),

@@ -61,13 +61,17 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
   (`#lib/photo-client.ts`), il server valida i byte reali (`#lib/server/photos.ts`) e le salva in base64
   nella tabella `photo`. Servite da `/foto/[photoId]` con cache immutable: l'id cambia a ogni sostituzione.
 
-## Video di sfondo
+## Video di benvenuto
 
-- L'organizzatore carica un video (MP4/WebM/MOV, max 40 MB) dalla pagina di gestione; compare dietro la busta in `/r/[token]`.
+- L'organizzatore carica fino a due video (MP4/WebM/MOV, max 40 MB): **computer** (orizzontale) e **telefono**
+  (verticale, facoltativo). Campo `slot` = `desktop` | `mobile` → `event.videoUrl`/`videoPoster` e `videoMobileUrl`/`videoMobilePoster`.
+- In `/r/[token]` il video parte **a tutto schermo** (`VideoIntro.svelte`) alla prima apertura su quel dispositivo
+  (localStorage), poi lascia la pagina. Su schermi stretti/verticali usa il video per telefono se c'è.
+  Pulsanti "Salta" e audio; "Rivedi il video" nella barra in alto. Niente intro con reduced-motion.
 - Produzione: il browser carica **direttamente su Vercel Blob** (`@vercel/blob/client` → token da
   `/evento/[adminToken]/video`, solo percorso `video/<eventId>/`), poi `?/video` verifica con `head()` e salva l'URL.
 - Sviluppo senza `BLOB_READ_WRITE_TOKEN`: `?/videoLocal` salva in `.uploads/video/`, servito da `/media/video/[name]`.
-- `event.videoPoster` è un fotogramma JPEG generato nel browser. Niente autoplay con reduced-motion/save-data; pulsante pausa sempre.
+- Il poster è un fotogramma JPEG generato nel browser. I partecipanti (`PlayersGarland dark`) stanno in cima all'hero.
 
 ## Lingue (it / es)
 

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import Avatar from '#lib/components/Avatar.svelte';
-	import Baubles from '#lib/components/Baubles.svelte';
 	import Envelope from '#lib/components/Envelope.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import Hills from '#lib/components/Hills.svelte';
 	import PlayersGarland from '#lib/components/PlayersGarland.svelte';
-	import VideoBackdrop from '#lib/components/VideoBackdrop.svelte';
+	import VideoIntro from '#lib/components/VideoIntro.svelte';
 	import { formatDay } from '#lib/format.ts';
 	import { getT } from '#lib/i18n/index.ts';
 	import type { PageProps } from './$types';
@@ -14,6 +14,8 @@
 	let { data, form }: PageProps = $props();
 
 	let phase = $state<'closed' | 'opening' | 'revealed'>('closed');
+	let introOpen = $state(false);
+	const hasVideo = $derived(Boolean(data.event.videoUrl || data.event.videoMobileUrl));
 	const t = $derived(getT(data.event.locale));
 	const i = $derived(t.invite);
 	const day = $derived(formatDay(data.event.exchangeDate, t.intlLocale));
@@ -27,28 +29,39 @@
 <svelte:head><title>{i.pageTitle(data.event.name)}</title></svelte:head>
 
 <div class="page">
-	<section
-		class="hero"
-		class:snow={!data.event.videoUrl}
-		class:has-video={data.event.videoUrl}
-		class:tall={data.receiver && phase !== 'revealed'}
-	>
-		{#if data.event.videoUrl}
-			<VideoBackdrop
-				src={data.event.videoUrl}
-				poster={data.event.videoPoster}
-				pauseLabel={i.pauseVideo}
-				playLabel={i.playVideo}
-			/>
-		{/if}
-		<Baubles tone="pine" />
+	<VideoIntro
+		bind:open={introOpen}
+		desktop={data.event.videoUrl
+			? { src: data.event.videoUrl, poster: data.event.videoPoster }
+			: null}
+		mobile={data.event.videoMobileUrl
+			? { src: data.event.videoMobileUrl, poster: data.event.videoMobilePoster }
+			: null}
+		t={i}
+		storageKey="intro:{page.params.token}:{data.event.videoUrl ?? ''}{data.event.videoMobileUrl ??
+			''}"
+	/>
+
+	<section class="hero snow" class:tall={data.receiver && phase !== 'revealed'}>
 		<div class="container inner">
 			<div class="top">
 				<div class="brand"><GiftIcon size={28} color="var(--gold-300)" /> {data.event.name}</div>
 				{#if data.managerName}
 					<span class="pill">{i.viewingFor(data.me.name)}</span>
 				{/if}
+				{#if hasVideo}
+					<button type="button" class="replay-intro" onclick={() => (introOpen = true)}>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+							><path
+								d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"
+							/></svg
+						>
+						{i.replayIntro}
+					</button>
+				{/if}
 			</div>
+
+			<PlayersGarland players={data.players} t={i} showReady={!data.receiver} dark />
 
 			{#if !data.receiver}
 				<div class="closed">
@@ -148,10 +161,6 @@
 					<p class="secret">{i.secret(data.receiver.name)}</p>
 				</section>
 			{/if}
-
-			<div class="players">
-				<PlayersGarland players={data.players} t={i} showReady={!data.receiver} />
-			</div>
 
 			{#snippet ownList()}
 				<p class="muted">
@@ -257,17 +266,6 @@
 		background-color: var(--holly-700);
 		color: var(--cream);
 	}
-	.hero.has-video {
-		background-color: var(--holly-800);
-	}
-	.hero.has-video .inner {
-		text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
-	}
-	@media (max-width: 560px) {
-		.hero.has-video .inner {
-			padding-bottom: 150px;
-		}
-	}
 	.hero.tall {
 		min-height: 640px;
 	}
@@ -291,6 +289,25 @@
 		font-family: var(--font-display);
 		font-weight: 800;
 		font-size: 20px;
+	}
+	.replay-intro {
+		margin-left: auto;
+		min-height: 40px;
+		padding: 0 14px;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		border-radius: 999px;
+		border: 1.5px solid rgba(255, 255, 255, 0.5);
+		background: rgba(0, 0, 0, 0.15);
+		color: var(--cream);
+		font: inherit;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.replay-intro:hover {
+		background: rgba(0, 0, 0, 0.3);
 	}
 	.pill {
 		padding: 6px 12px;
@@ -526,10 +543,6 @@
 		line-height: 1.55;
 		color: #f6dcd8;
 	}
-	.players {
-		flex: 1 1 100%;
-		min-width: 0;
-	}
 	.lists.stacked {
 		flex-direction: column;
 		flex-wrap: nowrap;
@@ -537,8 +550,7 @@
 		align-items: stretch;
 		max-width: 760px;
 	}
-	.lists.stacked .card,
-	.lists.stacked .players {
+	.lists.stacked .card {
 		flex: none;
 	}
 	.lists .card.mine {

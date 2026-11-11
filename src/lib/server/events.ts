@@ -394,7 +394,9 @@ export async function getInviteView(db: Db, token: string) {
 			organizerName: ev.organizerName,
 			locale: toLocale(ev.locale),
 			videoUrl: ev.videoUrl,
-			videoPoster: ev.videoPoster
+			videoPoster: ev.videoPoster,
+			videoMobileUrl: ev.videoMobileUrl,
+			videoMobilePoster: ev.videoMobilePoster
 		},
 		me: {
 			id: me.id,
@@ -498,26 +500,41 @@ export async function localeForToken(db: Db, token: string): Promise<Locale> {
 
 // ------------------------------------------------------- video di sfondo
 
+export type VideoSlot = 'desktop' | 'mobile';
+
+export function toVideoSlot(value: unknown): VideoSlot {
+	return value === 'mobile' ? 'mobile' : 'desktop';
+}
+
 /** Evento gestito da questo link (serve all'upload per decidere il percorso del file). */
 export async function requireEventForAdmin(db: Db, adminToken: string) {
 	const [ev] = await db
-		.select({ id: event.id, videoUrl: event.videoUrl })
+		.select({ id: event.id, videoUrl: event.videoUrl, videoMobileUrl: event.videoMobileUrl })
 		.from(event)
 		.where(eq(event.adminToken, adminToken));
 	if (!ev) throw new EventError((t) => t.errors.eventNotFound, 404);
 	return ev;
 }
 
-/** Imposta (o toglie, con url null) il video di sfondo. Restituisce l'URL precedente da cancellare. */
+/**
+ * Imposta (o toglie, con `video` null) il video di uno slot: `desktop` (orizzontale) o `mobile`
+ * (verticale, facoltativo). Restituisce l'URL precedente dello stesso slot, da cancellare.
+ */
 export async function setEventVideo(
 	db: Db,
 	adminToken: string,
-	video: { url: string; poster: string | null } | null
+	video: { url: string; poster: string | null } | null,
+	slot: VideoSlot = 'desktop'
 ) {
 	const ev = await requireEventForAdmin(db, adminToken);
+	const current = slot === 'mobile' ? ev.videoMobileUrl : ev.videoUrl;
 	await db
 		.update(event)
-		.set({ videoUrl: video?.url ?? null, videoPoster: video?.poster ?? null })
+		.set(
+			slot === 'mobile'
+				? { videoMobileUrl: video?.url ?? null, videoMobilePoster: video?.poster ?? null }
+				: { videoUrl: video?.url ?? null, videoPoster: video?.poster ?? null }
+		)
 		.where(eq(event.id, ev.id));
-	return { previousUrl: ev.videoUrl && ev.videoUrl !== video?.url ? ev.videoUrl : null };
+	return { previousUrl: current && current !== video?.url ? current : null };
 }

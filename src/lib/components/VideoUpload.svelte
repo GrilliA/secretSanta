@@ -16,7 +16,10 @@
 		eventId,
 		adminToken,
 		videoUrl,
-		videoPoster
+		videoPoster,
+		slot,
+		label,
+		hint
 	}: {
 		t: Messages['admin']['video'];
 		mode: 'blob' | 'local' | 'none';
@@ -24,6 +27,9 @@
 		adminToken: string;
 		videoUrl: string | null;
 		videoPoster: string | null;
+		slot: 'desktop' | 'mobile';
+		label: string;
+		hint: string;
 	} = $props();
 
 	const MAX = 40 * 1024 * 1024;
@@ -93,12 +99,13 @@
 
 			const body = new FormData();
 			body.set('poster', poster);
+			body.set('slot', slot);
 			if (mode === 'blob') {
 				status = 'uploading';
 				progress = 0;
 				const ext =
 					file.type === 'video/webm' ? 'webm' : file.type === 'video/quicktime' ? 'mov' : 'mp4';
-				const blob = await upload(`video/${eventId}/sfondo.${ext}`, file, {
+				const blob = await upload(`video/${eventId}/${slot}.${ext}`, file, {
 					access: 'public',
 					contentType: file.type,
 					handleUploadUrl: `/evento/${adminToken}/video`,
@@ -124,9 +131,11 @@
 	}
 </script>
 
-<section class="card video">
-	<h2>{t.title}</h2>
-	<p class="muted">{t.hint}</p>
+<div class="video" class:mobile={slot === 'mobile'}>
+	<div class="head">
+		<h3>{label}</h3>
+		<span class="muted">{hint}</span>
+	</div>
 
 	{#if videoUrl}
 		<video
@@ -165,6 +174,7 @@
 			</label>
 			{#if videoUrl && status === 'idle'}
 				<form method="POST" action="?/removeVideo" use:enhance>
+					<input type="hidden" name="slot" value={slot} />
 					<button class="text-btn" type="submit">{t.remove}</button>
 				</form>
 			{/if}
@@ -183,17 +193,35 @@
 		<small class="muted">{t.limits}</small>
 	{/if}
 	{#if error}<p class="err" role="alert">{error}</p>{/if}
-</section>
+</div>
 
 <style>
 	.video {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 10px;
 	}
-	h2 {
-		font-size: 22px;
-		color: var(--pine);
+	.video + :global(.video) {
+		padding-top: 16px;
+		border-top: 1px dashed var(--sand);
+	}
+	.head {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	h3 {
+		margin: 0;
+		font-family: var(--font-body);
+		font-size: 15px;
+		font-weight: 600;
+		color: var(--ink);
+	}
+	.mobile .preview {
+		aspect-ratio: 9 / 16;
+		max-height: 280px;
+		width: auto;
+		align-self: flex-start;
 	}
 	.muted {
 		margin: 0;
