@@ -75,6 +75,9 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
 - **Musica** (`event.musicUrl`, MP3/M4A/OGG/WAV max 15 MB): stesso percorso Blob (`video/<eventId>/music.*`, limiti
   scelti in `limitsForPath`), actions `?/music` · `?/musicLocal` · `?/removeMusic`. In `/r/[token]` `MusicPlayer.svelte`
   parte dopo il video (o al primo tocco se il browser blocca l'autoplay); pulsante fisso per spegnerla, scelta salvata.
+- **Spotify** (`event.spotify` = `"track/<id>"`): l'organizzatore incolla link, codice iframe o URI; `parseSpotify`
+  (`#lib/spotify.ts`) accetta solo `open.spotify.com` e tipi track/album/playlist/episode/show. Nell'invito
+  `SpotifyEmbed.svelte` mostra il player ufficiale ("La colonna sonora"): non parte da solo, senza account = anteprima 30 s.
 - Il "Messaggio per tutti" dell'evento compare solo nelle email, non nella pagina dell'invito.
 
 ## Lingue (it / es)

@@ -151,6 +151,13 @@ export const es: Messages = {
 			failed: 'No se pudo subir. Inténtalo de nuevo.',
 			unavailable: 'La subida de música no está configurada.',
 			preview: 'Escuchar la música'
+		},
+		spotify: {
+			label: 'O una canción de Spotify',
+			placeholder: 'Pega el enlace o el código de «Compartir → Insertar»',
+			hint: 'Spotify no arranca solo: quien abre la invitación pulsa play. Sin cuenta de Spotify se oye un avance de 30 segundos.',
+			save: 'Conectar',
+			remove: 'Quitar'
 		}
 	},
 
@@ -200,7 +207,8 @@ export const es: Messages = {
 		soundOff: 'Quitar sonido',
 		replayIntro: 'Ver otra vez el vídeo',
 		musicOn: 'Poner la música',
-		musicOff: 'Apagar la música'
+		musicOff: 'Apagar la música',
+		soundtrack: 'La banda sonora'
 	},
 
 	email: {
@@ -290,6 +298,7 @@ export const es: Messages = {
 		musicMissing: 'Elige una canción.',
 		musicTooBig: 'El archivo es demasiado grande: máximo 15 MB.',
 		musicFormat: 'Formato no admitido: usa MP3, M4A, OGG o WAV.',
+		spotifyInvalid: 'Enlace de Spotify no válido: pega el enlace de una canción, álbum o lista.',
 		labels: {
 			yourName: 'Tu nombre',
 			eventName: 'Nombre del evento',

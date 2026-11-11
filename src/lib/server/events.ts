@@ -6,6 +6,7 @@ import { assignment, event, exclusion, participant, photo, wish } from './db/sch
 import type { PhotoInput } from './photos.ts';
 import { createToken } from './token.ts';
 import { getT, toLocale, type Locale, type Messages } from '#lib/i18n/index.ts';
+import { parseSpotify } from '../spotify.ts';
 
 /** Errore di dominio con messaggio mostrabile all'utente. */
 /**
@@ -397,7 +398,8 @@ export async function getInviteView(db: Db, token: string) {
 			videoPoster: ev.videoPoster,
 			videoMobileUrl: ev.videoMobileUrl,
 			videoMobilePoster: ev.videoMobilePoster,
-			musicUrl: ev.musicUrl
+			musicUrl: ev.musicUrl,
+			spotify: ev.spotify
 		},
 		me: {
 			id: me.id,
@@ -552,4 +554,13 @@ export async function setEventMusic(db: Db, adminToken: string, url: string | nu
 	const ev = await requireEventForAdmin(db, adminToken);
 	await db.update(event).set({ musicUrl: url }).where(eq(event.id, ev.id));
 	return { previousUrl: ev.musicUrl && ev.musicUrl !== url ? ev.musicUrl : null };
+}
+
+/** Collega (o toglie, con testo vuoto) un brano di Spotify: link, codice iframe o URI. */
+export async function setEventSpotify(db: Db, adminToken: string, input: string | null) {
+	const ev = await requireEventForAdmin(db, adminToken);
+	const value = parseSpotify(input);
+	if (input?.trim() && !value) throw new EventError((t) => t.errors.spotifyInvalid);
+	await db.update(event).set({ spotify: value }).where(eq(event.id, ev.id));
+	return value;
 }

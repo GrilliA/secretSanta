@@ -149,6 +149,13 @@ export const it = {
 			failed: 'Caricamento non riuscito. Riprova.',
 			unavailable: 'Il caricamento della musica non è configurato.',
 			preview: 'Ascolta la musica'
+		},
+		spotify: {
+			label: 'Oppure un brano di Spotify',
+			placeholder: 'Incolla il link o il codice da «Condividi → Incorpora»',
+			hint: 'Spotify non parte da solo: chi apre l’invito preme play. Senza account Spotify si sente un’anteprima di 30 secondi.',
+			save: 'Collega',
+			remove: 'Rimuovi'
 		}
 	},
 
@@ -198,7 +205,8 @@ export const it = {
 		soundOff: 'Togli audio',
 		replayIntro: 'Rivedi il video',
 		musicOn: 'Metti la musica',
-		musicOff: 'Spegni la musica'
+		musicOff: 'Spegni la musica',
+		soundtrack: 'La colonna sonora'
 	},
 
 	email: {
@@ -288,6 +296,7 @@ export const it = {
 		musicMissing: 'Scegli una canzone.',
 		musicTooBig: 'Il file è troppo grande: massimo 15 MB.',
 		musicFormat: 'Formato non supportato: usa MP3, M4A, OGG o WAV.',
+		spotifyInvalid: 'Link di Spotify non valido: incolla il link di un brano, album o playlist.',
 		labels: {
 			yourName: 'Il tuo nome',
 			eventName: 'Nome dell’evento',
