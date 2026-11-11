@@ -15,13 +15,16 @@
 		mobile = null,
 		t,
 		storageKey,
-		open = $bindable(false)
+		open = $bindable(false),
+		soundtrack = null
 	}: {
 		desktop: Clip | null;
 		mobile?: Clip | null;
 		t: Messages['invite'];
 		storageKey: string;
 		open?: boolean;
+		/** Colonna sonora esterna (Spotify): il video resta muto e il pulsante audio comanda lei. */
+		soundtrack?: { playing: boolean; toggle: () => void } | null;
 	} = $props();
 
 	let clip = $state<Clip | null>(null);
@@ -32,6 +35,7 @@
 	let opener: Element | null = null;
 
 	const MAX_ZOOM = 1.6;
+	const soundMuted = $derived(soundtrack ? !soundtrack.playing : muted);
 
 	function pickClip(): Clip | null {
 		const small = matchMedia('(max-width: 720px), (orientation: portrait) and (max-width: 1024px)');
@@ -75,6 +79,11 @@
 		skipButton?.focus();
 		if (!video) return;
 		video.currentTime = 0;
+		if (soundtrack) {
+			video.muted = true;
+			video.play().catch(close);
+			return;
+		}
 		// Prima prova con l'audio (alcuni browser lo permettono), altrimenti muto.
 		video.muted = false;
 		try {
@@ -95,6 +104,7 @@
 	}
 
 	function toggleSound() {
+		if (soundtrack) return soundtrack.toggle();
 		if (!video) return;
 		video.muted = !video.muted;
 		muted = video.muted;
@@ -155,8 +165,8 @@
 			>
 		</button>
 
-		<button type="button" class="pill sound" aria-pressed={!muted} onclick={toggleSound}>
-			{#if muted}
+		<button type="button" class="pill sound" aria-pressed={!soundMuted} onclick={toggleSound}>
+			{#if soundMuted}
 				<svg
 					width="18"
 					height="18"

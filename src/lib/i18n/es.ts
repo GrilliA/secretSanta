@@ -155,7 +155,7 @@ export const es: Messages = {
 		spotify: {
 			label: 'O una canción de Spotify',
 			placeholder: 'Pega el enlace o el código de «Compartir → Insertar»',
-			hint: 'Spotify no arranca solo: quien abre la invitación pulsa play. Sin cuenta de Spotify se oye un avance de 30 segundos.',
+			hint: 'Arranca junto con el vídeo de bienvenida (si el navegador no lo permite, al primer toque) y sustituye a la canción subida. Sin cuenta de Spotify se oye un avance de 30 segundos.',
 			save: 'Conectar',
 			remove: 'Quitar'
 		}

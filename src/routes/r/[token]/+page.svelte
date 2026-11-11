@@ -7,7 +7,7 @@
 	import Hills from '#lib/components/Hills.svelte';
 	import PlayersGarland from '#lib/components/PlayersGarland.svelte';
 	import MusicPlayer from '#lib/components/MusicPlayer.svelte';
-	import SpotifyEmbed from '#lib/components/SpotifyEmbed.svelte';
+	import SpotifySoundtrack from '#lib/components/SpotifySoundtrack.svelte';
 	import VideoIntro from '#lib/components/VideoIntro.svelte';
 	import { formatDay } from '#lib/format.ts';
 	import { getT } from '#lib/i18n/index.ts';
@@ -17,6 +17,8 @@
 
 	let phase = $state<'closed' | 'opening' | 'revealed'>('closed');
 	let introOpen = $state(false);
+	let spotify = $state<ReturnType<typeof SpotifySoundtrack>>();
+	let spotifyPlaying = $state(false);
 	const hasVideo = $derived(Boolean(data.event.videoUrl || data.event.videoMobileUrl));
 	const t = $derived(getT(data.event.locale));
 	const i = $derived(t.invite);
@@ -40,10 +42,13 @@
 			? { src: data.event.videoMobileUrl, poster: data.event.videoMobilePoster }
 			: null}
 		t={i}
+		soundtrack={data.event.spotify
+			? { playing: spotifyPlaying, toggle: () => spotify?.toggle() }
+			: null}
 		storageKey="intro:{page.params.token}:{data.event.videoUrl ?? ''}{data.event.videoMobileUrl ??
 			''}"
 	/>
-	{#if data.event.musicUrl}
+	{#if data.event.musicUrl && !data.event.spotify}
 		<MusicPlayer src={data.event.musicUrl} t={i} paused={introOpen} />
 	{/if}
 
@@ -136,7 +141,13 @@
 			{#if data.event.spotify}
 				<div class="soundtrack">
 					<span class="soundtrack-title">{i.soundtrack}</span>
-					<SpotifyEmbed value={data.event.spotify} title={i.soundtrack} />
+					<SpotifySoundtrack
+						bind:this={spotify}
+						bind:playing={spotifyPlaying}
+						value={data.event.spotify}
+						title={i.soundtrack}
+						t={i}
+					/>
 				</div>
 			{/if}
 		</div>
