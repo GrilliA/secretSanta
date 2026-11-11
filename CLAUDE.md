@@ -6,7 +6,7 @@ aggiunge i partecipanti, l'app estrae gli abbinamenti e invia a ognuno un link s
 ## Stack
 
 - **SvelteKit 3** + **Svelte 5 (runes)** + TypeScript strict. Nessun framework CSS: design tokens in `src/app.css`.
-- **Drizzle ORM** su **Neon** (driver `neon-http`, `src/lib/server/db/`), email via **Resend** (`src/lib/server/email/`).
+- **Drizzle ORM** su **Neon** (driver `neon-http`, `src/lib/server/db/`), email via **Gmail SMTP** (nodemailer, se ci sono `GMAIL_USER` + `GMAIL_APP_PASSWORD`) oppure **Resend** (`src/lib/server/email/send.ts`).
 - In sviluppo senza `DATABASE_URL` si usa **PGlite** su disco (`.pglite/`); nei test PGlite in memoria (`#lib/server/test-db.ts`).
 - Deploy su **Vercel** (`@sveltejs/adapter-vercel`). Test con **Vitest**.
 - Richiede Node ≥ 22 e **npm ≥ 11** (npm 10 fallisce l'install con `edgesOut` error).
