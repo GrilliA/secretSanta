@@ -27,6 +27,8 @@ export const event = pgTable('event', {
 	videoMobilePoster: text('video_mobile_poster'),
 	/** Musica di sottofondo della pagina dell'invito (Vercel Blob o file locale in sviluppo). */
 	musicUrl: text('music_url'),
+	/** Brano/playlist di Spotify incorporato nell'invito, come `"track/<id>"` (vedi `#lib/spotify.ts`). */
+	spotify: text('spotify'),
 	/** Lingua di email e pagine dell'evento ('it' | 'es'). */
 	locale: text('locale').notNull().default('it'),
 	organizerName: text('organizer_name').notNull(),

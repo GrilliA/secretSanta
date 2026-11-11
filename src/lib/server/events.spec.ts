@@ -445,3 +445,21 @@ describe('musica di sottofondo', () => {
 		expect((await getInviteView(db, p.token))?.event.musicUrl).toBeNull();
 	});
 });
+
+describe('Spotify', () => {
+	it('salva il brano dal codice iframe, rifiuta link sbagliati e si toglie', async () => {
+		await setupFamily();
+		const { setEventSpotify } = await import('./events.ts');
+		const id = '7LmixnRetIvGlllHKIdMZ1';
+		await setEventSpotify(
+			db,
+			admin,
+			`<iframe src="https://open.spotify.com/embed/track/${id}?si=x"></iframe>`
+		);
+		const [p] = await db.query.participant.findMany();
+		expect((await getInviteView(db, p.token))?.event.spotify).toBe(`track/${id}`);
+		await expect(setEventSpotify(db, admin, 'https://youtube.com/x')).rejects.toThrow(EventError);
+		await setEventSpotify(db, admin, null);
+		expect((await getInviteView(db, p.token))?.event.spotify).toBeNull();
+	});
+});

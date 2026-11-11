@@ -13,6 +13,7 @@ import {
 	requireEventForAdmin,
 	runDraw,
 	setEventMusic,
+	setEventSpotify,
 	setEventVideo,
 	toVideoSlot,
 	setPhoto
@@ -217,6 +218,25 @@ export const actions: Actions = {
 		return guard(async () => {
 			const { previousUrl } = await setEventMusic(db, params.admin, null);
 			await deleteVideo(previousUrl);
+			return { ok: true };
+		}, lang);
+	},
+
+	spotify: async ({ params, request }) => {
+		const data = await request.formData();
+		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		return guard(async () => {
+			await setEventSpotify(db, params.admin, field(data, 'spotify'));
+			return { ok: true };
+		}, lang);
+	},
+
+	removeSpotify: async ({ params }) => {
+		const db = await getDb();
+		const lang = () => localeForAdmin(db, params.admin);
+		return guard(async () => {
+			await setEventSpotify(db, params.admin, null);
 			return { ok: true };
 		}, lang);
 	}

@@ -5,6 +5,7 @@
 	import Avatar from '#lib/components/Avatar.svelte';
 	import VideoUpload from '#lib/components/VideoUpload.svelte';
 	import MusicUpload from '#lib/components/MusicUpload.svelte';
+	import SpotifyEmbed from '#lib/components/SpotifyEmbed.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import { preparePhoto, replaceInputFile } from '#lib/photo-client.ts';
 	import { formatDay } from '#lib/format.ts';
@@ -395,6 +396,31 @@
 					adminToken={page.params.admin ?? ''}
 					musicUrl={data.event.musicUrl}
 				/>
+				<div class="spotify-field">
+					{#if data.event.spotify}
+						<span class="label">{a.spotify.label}</span>
+						<SpotifyEmbed value={data.event.spotify} title={a.spotify.label} />
+						<form method="POST" action="?/removeSpotify" use:enhance>
+							<button class="text-btn" type="submit">{a.spotify.remove}</button>
+						</form>
+					{:else}
+						<form method="POST" action="?/spotify" use:enhance class="spotify-form">
+							<label class="label" for="spotify">{a.spotify.label}</label>
+							<div class="row">
+								<input
+									id="spotify"
+									name="spotify"
+									class="input"
+									placeholder={a.spotify.placeholder}
+									autocomplete="off"
+									required
+								/>
+								<button class="btn btn-pine" type="submit">{a.spotify.save}</button>
+							</div>
+						</form>
+					{/if}
+					<small class="muted">{a.spotify.hint}</small>
+				</div>
 			</section>
 
 			<section class="cta snow">
@@ -775,6 +801,34 @@
 		display: flex;
 		flex-direction: column;
 		gap: 24px;
+	}
+	.spotify-field {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding-top: 16px;
+		border-top: 1px dashed var(--sand);
+	}
+	.spotify-field .label {
+		font-size: 15px;
+		font-weight: 600;
+		color: var(--ink);
+	}
+	.spotify-form {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.spotify-form .row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.spotify-form .input {
+		flex: 1 1 220px;
+	}
+	.spotify-field form:has(.text-btn) {
+		align-self: flex-start;
 	}
 	.video-card {
 		display: flex;

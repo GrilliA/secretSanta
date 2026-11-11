@@ -7,6 +7,7 @@
 	import Hills from '#lib/components/Hills.svelte';
 	import PlayersGarland from '#lib/components/PlayersGarland.svelte';
 	import MusicPlayer from '#lib/components/MusicPlayer.svelte';
+	import SpotifyEmbed from '#lib/components/SpotifyEmbed.svelte';
 	import VideoIntro from '#lib/components/VideoIntro.svelte';
 	import { formatDay } from '#lib/format.ts';
 	import { getT } from '#lib/i18n/index.ts';
@@ -130,6 +131,12 @@
 					<svg class="spark s3" viewBox="0 0 24 24" aria-hidden="true"
 						><path d="M12 0l2.5 9.5L24 12l-9.5 2.5L12 24l-2.5-9.5L0 12l9.5-2.5z" /></svg
 					>
+				</div>
+			{/if}
+			{#if data.event.spotify}
+				<div class="soundtrack">
+					<span class="soundtrack-title">{i.soundtrack}</span>
+					<SpotifyEmbed value={data.event.spotify} title={i.soundtrack} />
 				</div>
 			{/if}
 		</div>
@@ -259,6 +266,22 @@
 </div>
 
 <style>
+	.soundtrack {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		width: min(100%, 480px);
+		margin: 28px auto 0;
+	}
+	.soundtrack-title {
+		font-family: var(--font-display);
+		font-style: italic;
+		font-size: 18px;
+		color: var(--gold-300);
+		text-align: center;
+	}
 	.page {
 		min-height: 100dvh;
 		background: var(--cream);
