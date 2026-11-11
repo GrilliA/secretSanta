@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import VideoUpload from '#lib/components/VideoUpload.svelte';
+	import MusicUpload from '#lib/components/MusicUpload.svelte';
 	import GiftIcon from '#lib/components/GiftIcon.svelte';
 	import { preparePhoto, replaceInputFile } from '#lib/photo-client.ts';
 	import { formatDay } from '#lib/format.ts';
@@ -381,6 +382,18 @@
 					adminToken={page.params.admin ?? ''}
 					videoUrl={data.event.videoMobileUrl}
 					videoPoster={data.event.videoMobilePoster}
+				/>
+			</section>
+
+			<section class="card video-card">
+				<h2>{a.music.title}</h2>
+				<p class="muted">{a.music.hint}</p>
+				<MusicUpload
+					t={a.music}
+					mode={data.videoMode}
+					eventId={data.event.id}
+					adminToken={page.params.admin ?? ''}
+					musicUrl={data.event.musicUrl}
 				/>
 			</section>
 

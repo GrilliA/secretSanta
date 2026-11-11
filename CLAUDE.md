@@ -61,7 +61,7 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
   (`#lib/photo-client.ts`), il server valida i byte reali (`#lib/server/photos.ts`) e le salva in base64
   nella tabella `photo`. Servite da `/foto/[photoId]` con cache immutable: l'id cambia a ogni sostituzione.
 
-## Video di benvenuto
+## Video di benvenuto e musica
 
 - L'organizzatore carica fino a due video (MP4/WebM/MOV, max 40 MB): **computer** (orizzontale) e **telefono**
   (verticale, facoltativo). Campo `slot` = `desktop` | `mobile` → `event.videoUrl`/`videoPoster` e `videoMobileUrl`/`videoMobilePoster`.
@@ -72,6 +72,10 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
   `/evento/[adminToken]/video`, solo percorso `video/<eventId>/`), poi `?/video` verifica con `head()` e salva l'URL.
 - Sviluppo senza `BLOB_READ_WRITE_TOKEN`: `?/videoLocal` salva in `.uploads/video/`, servito da `/media/video/[name]`.
 - Il poster è un fotogramma JPEG generato nel browser. I partecipanti (`PlayersGarland dark`) stanno in cima all'hero.
+- **Musica** (`event.musicUrl`, MP3/M4A/OGG/WAV max 15 MB): stesso percorso Blob (`video/<eventId>/music.*`, limiti
+  scelti in `limitsForPath`), actions `?/music` · `?/musicLocal` · `?/removeMusic`. In `/r/[token]` `MusicPlayer.svelte`
+  parte dopo il video (o al primo tocco se il browser blocca l'autoplay); pulsante fisso per spegnerla, scelta salvata.
+- Il "Messaggio per tutti" dell'evento compare solo nelle email, non nella pagina dell'invito.
 
 ## Lingue (it / es)
 

@@ -136,6 +136,21 @@ export const es: Messages = {
 			failed: 'No se ha podido subir. Inténtalo de nuevo.',
 			unavailable: 'La subida de vídeos no está configurada.',
 			preview: 'Vista previa del vídeo'
+		},
+		music: {
+			title: 'Música de fondo',
+			hint: 'Suena mientras cada uno mira su invitación (después del vídeo, si lo hay). Quien la abre siempre puede apagarla.',
+			choose: 'Elige una canción',
+			change: 'Cambiar canción',
+			remove: 'Quitar',
+			uploading: (pct: number) => `Subiendo… ${pct}%`,
+			saving: 'Guardando…',
+			limits: 'MP3, M4A, OGG o WAV · máximo 15 MB',
+			tooBig: 'El archivo es demasiado grande: máximo 15 MB.',
+			format: 'Formato no admitido: usa MP3, M4A, OGG o WAV.',
+			failed: 'No se pudo subir. Inténtalo de nuevo.',
+			unavailable: 'La subida de música no está configurada.',
+			preview: 'Escuchar la música'
 		}
 	},
 
@@ -183,7 +198,9 @@ export const es: Messages = {
 		skipIntro: 'Saltar',
 		soundOn: 'Activar sonido',
 		soundOff: 'Quitar sonido',
-		replayIntro: 'Ver otra vez el vídeo'
+		replayIntro: 'Ver otra vez el vídeo',
+		musicOn: 'Poner la música',
+		musicOff: 'Apagar la música'
 	},
 
 	email: {
@@ -269,6 +286,10 @@ export const es: Messages = {
 		videoTooBig: 'El vídeo es demasiado grande: máximo 40 MB.',
 		videoFormat: 'Formato no admitido: usa MP4, WebM o MOV.',
 		videoPoster: 'Vista previa del vídeo no válida.',
+		musicInvalid: 'Música no válida: vuelve a subirla.',
+		musicMissing: 'Elige una canción.',
+		musicTooBig: 'El archivo es demasiado grande: máximo 15 MB.',
+		musicFormat: 'Formato no admitido: usa MP3, M4A, OGG o WAV.',
 		labels: {
 			yourName: 'Tu nombre',
 			eventName: 'Nombre del evento',

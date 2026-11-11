@@ -431,3 +431,17 @@ describe('video di sfondo', () => {
 		await expect(setEventVideo(db, 'nope', null)).rejects.toThrow(EventError);
 	});
 });
+
+describe('musica di sottofondo', () => {
+	it('si imposta, compare nell’invito e si toglie', async () => {
+		await setupFamily();
+		const { setEventMusic } = await import('./events.ts');
+		expect((await setEventMusic(db, admin, '/media/video/a.mp3')).previousUrl).toBeNull();
+		const second = await setEventMusic(db, admin, '/media/video/b.mp3');
+		expect(second.previousUrl).toBe('/media/video/a.mp3');
+		const [p] = await db.query.participant.findMany();
+		expect((await getInviteView(db, p.token))?.event.musicUrl).toBe('/media/video/b.mp3');
+		expect((await setEventMusic(db, admin, null)).previousUrl).toBe('/media/video/b.mp3');
+		expect((await getInviteView(db, p.token))?.event.musicUrl).toBeNull();
+	});
+});

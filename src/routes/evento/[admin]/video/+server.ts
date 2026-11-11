@@ -2,13 +2,14 @@ import { error, json } from '@sveltejs/kit';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { getDb } from '#lib/server/db/index.ts';
 import { requireEventForAdmin } from '#lib/server/events.ts';
-import { blobPrefix, VIDEO_MAX_BYTES, VIDEO_TYPES, videoMode } from '#lib/server/video.ts';
+import { blobPrefix, limitsForPath, videoMode } from '#lib/server/video.ts';
 import type { RequestHandler } from './$types';
 
 /**
  * Rilascia il token per caricare il video direttamente dal browser a Vercel Blob
  * (le funzioni Vercel accettano al massimo ~4,5 MB, i video passano accanto al server).
- * Il file può andare solo sotto `video/<id evento>/`, solo come video e solo entro il limite.
+ * Il file può andare solo sotto `video/<id evento>/`, solo come video (o audio, per `music.*`)
+ * e solo entro il limite.
  */
 export const POST: RequestHandler = async ({ params, request }) => {
 	if (videoMode() !== 'blob') error(404, 'Not found');
@@ -22,9 +23,10 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			body,
 			onBeforeGenerateToken: async (pathname) => {
 				if (!pathname.startsWith(blobPrefix(ev.id))) throw new Error('Percorso non valido');
+				const limits = limitsForPath(pathname);
 				return {
-					allowedContentTypes: [...VIDEO_TYPES],
-					maximumSizeInBytes: VIDEO_MAX_BYTES,
+					allowedContentTypes: [...limits.types],
+					maximumSizeInBytes: limits.max,
 					addRandomSuffix: true,
 					validUntil: Date.now() + 15 * 60 * 1000
 				};

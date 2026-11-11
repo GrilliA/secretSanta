@@ -396,7 +396,8 @@ export async function getInviteView(db: Db, token: string) {
 			videoUrl: ev.videoUrl,
 			videoPoster: ev.videoPoster,
 			videoMobileUrl: ev.videoMobileUrl,
-			videoMobilePoster: ev.videoMobilePoster
+			videoMobilePoster: ev.videoMobilePoster,
+			musicUrl: ev.musicUrl
 		},
 		me: {
 			id: me.id,
@@ -509,7 +510,12 @@ export function toVideoSlot(value: unknown): VideoSlot {
 /** Evento gestito da questo link (serve all'upload per decidere il percorso del file). */
 export async function requireEventForAdmin(db: Db, adminToken: string) {
 	const [ev] = await db
-		.select({ id: event.id, videoUrl: event.videoUrl, videoMobileUrl: event.videoMobileUrl })
+		.select({
+			id: event.id,
+			videoUrl: event.videoUrl,
+			videoMobileUrl: event.videoMobileUrl,
+			musicUrl: event.musicUrl
+		})
 		.from(event)
 		.where(eq(event.adminToken, adminToken));
 	if (!ev) throw new EventError((t) => t.errors.eventNotFound, 404);
@@ -537,4 +543,13 @@ export async function setEventVideo(
 		)
 		.where(eq(event.id, ev.id));
 	return { previousUrl: current && current !== video?.url ? current : null };
+}
+
+// ------------------------------------------------------- musica di sottofondo
+
+/** Imposta (o toglie, con `url` null) la musica dell'invito. Restituisce l'URL precedente da cancellare. */
+export async function setEventMusic(db: Db, adminToken: string, url: string | null) {
+	const ev = await requireEventForAdmin(db, adminToken);
+	await db.update(event).set({ musicUrl: url }).where(eq(event.id, ev.id));
+	return { previousUrl: ev.musicUrl && ev.musicUrl !== url ? ev.musicUrl : null };
 }
