@@ -130,6 +130,8 @@
 				const [type, id] = value.split('/');
 				// Spotify sostituisce l'elemento con il suo iframe: gli si passa un figlio creato qui.
 				const el = document.createElement('div');
+				// Nodo creato fuori da Svelte e ceduto a Spotify: Svelte non lo gestisce.
+				// eslint-disable-next-line svelte/no-dom-manipulating
 				host.append(el);
 				api.createController(
 					el,
