@@ -14,13 +14,31 @@
 	}: { src: string; poster?: string | null; pauseLabel: string; playLabel: string } = $props();
 
 	let video = $state<HTMLVideoElement>();
+	let box = $state<HTMLDivElement>();
 	let playing = $state(false);
+	/** "fit": il video intero al centro con una copia sfocata dietro, invece di uno zoom eccessivo. */
+	let fit = $state(false);
+
+	/** Zoom oltre il quale "cover" taglia troppo (es. video orizzontale su telefono verticale). */
+	const MAX_ZOOM = 1.6;
+
+	function updateFit() {
+		if (!video || !box || !video.videoWidth) return;
+		const videoRatio = video.videoWidth / video.videoHeight;
+		const boxRatio = box.clientWidth / box.clientHeight;
+		const zoom = Math.max(videoRatio / boxRatio, boxRatio / videoRatio);
+		fit = zoom > MAX_ZOOM;
+	}
 
 	onMount(() => {
 		const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 		const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
 			?.saveData;
 		if (!reduce && !saveData) play();
+
+		const observer = new ResizeObserver(updateFit);
+		if (box) observer.observe(box);
+		return () => observer.disconnect();
 	});
 
 	function play() {
@@ -41,9 +59,13 @@
 	}
 </script>
 
-<div class="backdrop" aria-hidden="true">
+<div class="backdrop" class:fit aria-hidden="true" bind:this={box}>
+	{#if poster}
+		<img class="blur" src={poster} alt="" />
+	{/if}
 	<video
 		bind:this={video}
+		onloadedmetadata={updateFit}
 		{src}
 		poster={poster ?? undefined}
 		muted
@@ -95,6 +117,23 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+	}
+	/* Copia sfocata del fotogramma: riempie lo spazio attorno al video quando è mostrato intero. */
+	.blur {
+		position: absolute;
+		inset: -40px;
+		width: calc(100% + 80px);
+		height: calc(100% + 80px);
+		object-fit: cover;
+		filter: blur(28px) saturate(1.2);
+		opacity: 0;
+		transition: opacity 0.3s ease;
+	}
+	.fit .blur {
+		opacity: 1;
+	}
+	.fit video {
+		object-fit: contain;
 	}
 	/* Velatura rossa: i testi chiari restano leggibili su qualsiasi video. */
 	.veil {
