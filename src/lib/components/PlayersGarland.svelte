@@ -101,7 +101,7 @@
 		padding: 0 20px;
 		list-style: none;
 		display: grid;
-		grid-template-columns: repeat(auto-fill, var(--col));
+		grid-template-columns: repeat(auto-fit, var(--col));
 		justify-content: center;
 		grid-auto-rows: var(--row);
 		background-image:
