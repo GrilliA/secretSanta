@@ -77,7 +77,9 @@ Accessibilità: target ≥ 44px, contrasto AA, `prefers-reduced-motion` rispetta
   parte dopo il video (o al primo tocco se il browser blocca l'autoplay); pulsante fisso per spegnerla, scelta salvata.
 - **Spotify** (`event.spotify` = `"track/<id>"`): l'organizzatore incolla link, codice iframe o URI; `parseSpotify`
   (`#lib/spotify.ts`) accetta solo `open.spotify.com` e tipi track/album/playlist/episode/show. Nell'invito
-  `SpotifyEmbed.svelte` mostra il player ufficiale ("La colonna sonora"): non parte da solo, senza account = anteprima 30 s.
+  `SpotifySoundtrack.svelte` usa l'iFrame API di Spotify: parte insieme al video di benvenuto (video muto, il suo
+  pulsante audio comanda Spotify), se l'autoplay è bloccato al primo tocco; pulsante fisso on/off. Con Spotify la
+  canzone caricata non suona. Senza account = anteprima 30 s. Se lo script non carica, iframe semplice.
 - Il "Messaggio per tutti" dell'evento compare solo nelle email, non nella pagina dell'invito.
 
 ## Lingue (it / es)

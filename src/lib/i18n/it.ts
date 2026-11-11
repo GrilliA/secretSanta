@@ -153,7 +153,7 @@ export const it = {
 		spotify: {
 			label: 'Oppure un brano di Spotify',
 			placeholder: 'Incolla il link o il codice da «Condividi → Incorpora»',
-			hint: 'Spotify non parte da solo: chi apre l’invito preme play. Senza account Spotify si sente un’anteprima di 30 secondi.',
+			hint: 'Parte insieme al video di benvenuto (se il browser non lo permette, al primo tocco) e prende il posto della canzone caricata. Senza account Spotify si sente un’anteprima di 30 secondi.',
 			save: 'Collega',
 			remove: 'Rimuovi'
 		}
